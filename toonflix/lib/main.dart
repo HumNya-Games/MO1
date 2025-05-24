@@ -47,7 +47,7 @@ class App extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 120),
+                const SizedBox(height: 100),
                 Text(
                   "Tatal Balance",
                   style: TextStyle(
@@ -80,7 +80,7 @@ class App extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 80),
+                const SizedBox(height: 70),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
