@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:toonflix2/widgets/webtoon_widget.dart'; // Webtoon 위젯 import
 
 class DetailScreen extends StatelessWidget {
   final String id, title, thumb;
@@ -31,32 +32,11 @@ class DetailScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Hero(
-                tag: id,
-                child: Container(
-                  clipBehavior: Clip.hardEdge,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(27),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(177),
-                        blurRadius: 7,
-                        blurStyle: BlurStyle.inner,
-                        spreadRadius: 0.7,
-                        offset: Offset(7, 5),
-                      ),
-                    ],
-                  ),
-                  width: 270,
-
-                  child: Image.network(
-                    thumb,
-                    headers: {
-                      "User-Agent":
-                          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
-                    },
-                  ),
-                ),
+              Webtoon(
+                id: id,
+                title: title,
+                thumb: thumb,
+                isDetailScreen: true, // 여기서 detail 여부 전달!
               ),
             ],
           ),
