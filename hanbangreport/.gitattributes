@@ -1,0 +1,18 @@
+# 모든 파일에 자동 텍스트 인식, 줄바꿈 자동 조정
+* text=auto
+
+# Dart 파일은 항상 LF로 저장
+*.dart text eol=lf
+
+# Kotlin 파일은 LF로 저장
+*.kt text eol=lf
+
+# Swift 파일은 LF로 저장
+*.swift text eol=lf
+
+# C, H 헤더 파일도 LF
+*.c text eol=lf
+*.h text eol=lf
+
+# CMake 파일 LF
+*.cmake text eol=lf
