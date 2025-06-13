@@ -1,0 +1,44 @@
+name: hanbangreport
+description: "한방 신고 앱 — 운행 중 음성 인식으로 신고 위치와 시간을 기록하는 앱"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # 아이폰 스타일 아이콘
+  cupertino_icons: ^1.0.8
+
+  # 위치 정보 가져오기
+  geolocator: ^11.0.0
+
+  # 위경도 → 주소 변환
+  geocoding: ^3.0.0
+
+  # 음성 인식 기능
+  speech_to_text: ^7.0.0
+
+  # 로컬 데이터 저장
+  shared_preferences: ^2.2.0
+
+  # 권한 요청
+  permission_handler: ^11.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # 권장 코드 스타일 linter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/sounds/
