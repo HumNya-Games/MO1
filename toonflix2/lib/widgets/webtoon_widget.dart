@@ -78,7 +78,7 @@ class Webtoon extends StatelessWidget {
                     ),
                   ],
                 ),
-                width: 370,
+                width: 297,
 
                 child: Image.network(
                   thumb,
