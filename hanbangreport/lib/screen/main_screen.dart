@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hanbangreport/widgets/bottom_nav_bar.dart';
+import 'package:hanbangreport/widgets/start_drive_dialog.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -9,10 +10,8 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  // 현재 선택된 인덱스 (홈 화면은 0)
   int _selectedIndex = 0;
 
-  // 탭 아이템 클릭 시 호출 함수
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -20,7 +19,6 @@ class _MainScreenState extends State<MainScreen> {
 
     switch (index) {
       case 0:
-        // 현재 화면이므로 이동 없음
         break;
       case 1:
         Navigator.pushReplacementNamed(context, '/report_list');
@@ -34,46 +32,62 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  void _onDriveStartConfirmed() {
+    // 팝업 확인 후 처리 로직 (예: 운행 시작 상태 변경, 위치 및 시간 저장 등)
+    // 지금은 단순 로그 출력
+    debugPrint('운행 시작 확인됨');
+  }
+
+  Future<void> _showStartDriveDialog() async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false, // 바깥 터치로 닫기 방지
+      builder: (context) {
+        return StartDriveDialog(onConfirmed: _onDriveStartConfirmed);
+      },
+    );
+  }
+
+  void _handleDrivingButtonTap() {
+    _showStartDriveDialog();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      bottomNavigationBar: BottomNavBar(
+      bottomNavigationBar: CustomBottomNavBar(
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // 상단 영역 (Spacer)
             const Expanded(child: SizedBox()),
 
-            // 운행 시작 버튼
             Center(
               child: GestureDetector(
-                onTap: () {
-                  // 운행 시작 기능
-                },
+                onTap: _handleDrivingButtonTap,
                 child: Image.asset(
                   'assets/images/driving_button.png',
                   width: MediaQuery.of(context).size.width * 0.5,
+                  filterQuality: FilterQuality.high,
                 ),
               ),
             ),
 
-            // 운행 버튼과 리스트 사이 Spacer
             const Expanded(child: SizedBox()),
 
-            // 신고 현황 안내 바 + 리스트 버튼 + 안내 텍스트
             Column(
               children: [
-                // 신고 현황 안내 바
                 Container(
                   margin: const EdgeInsets.only(bottom: 11),
                   decoration: BoxDecoration(
                     image: const DecorationImage(
                       image: AssetImage('assets/images/main_bar1.png'),
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
+                      isAntiAlias: true,
+                      filterQuality: FilterQuality.high,
                     ),
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -94,7 +108,6 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                 ),
 
-                // 신고 리스트 버튼 3개
                 _buildReportListButton(
                   context,
                   'assets/images/main_bar2.png',
@@ -136,7 +149,6 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  // 신고 리스트 버튼 위젯
   static Widget _buildReportListButton(
     BuildContext context,
     String bgImage,
@@ -150,26 +162,42 @@ class _MainScreenState extends State<MainScreen> {
         Navigator.pushNamed(context, route);
       },
       child: Container(
-        margin: const EdgeInsets.only(top: 11),
+        margin: const EdgeInsets.only(top: 7),
         decoration: BoxDecoration(
-          image: DecorationImage(image: AssetImage(bgImage), fit: BoxFit.cover),
+          image: DecorationImage(
+            image: AssetImage(bgImage),
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.high,
+          ),
           borderRadius: BorderRadius.circular(10),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 0),
         width: MediaQuery.of(context).size.width * 0.9,
         child: Row(
           children: [
-            Image.asset(iconImage, width: 30, height: 30),
-            const SizedBox(width: 12),
+            Transform.translate(
+              offset: const Offset(1, 7),
+              child: Image.asset(
+                iconImage,
+                width: 51,
+                height: 51,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+              ),
+            ),
+            const SizedBox(width: 11),
             Expanded(
               child: Text(
                 title,
                 style: const TextStyle(color: Colors.white, fontSize: 16),
               ),
             ),
-            Text(
-              count,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+            Transform.translate(
+              offset: const Offset(-7, 0),
+              child: Text(
+                count,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
             ),
           ],
         ),
