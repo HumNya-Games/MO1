@@ -18,18 +18,6 @@ class _StartDriveDialogState extends State<StartDriveDialog> {
   @override
   void initState() {
     super.initState();
-    _loadPref();
-  }
-
-  Future<void> _loadPref() async {
-    final prefs = await SharedPreferences.getInstance();
-    final dontShow = prefs.getBool(_prefKey) ?? false;
-    if (dontShow) {
-      widget.onConfirmed();
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    }
   }
 
   Future<void> _savePref() async {

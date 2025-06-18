@@ -19,6 +19,7 @@ class _TitleScreenState extends State<TitleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    print('로고 출력');
     return Scaffold(
       backgroundColor: Colors.black,
       body: Center(

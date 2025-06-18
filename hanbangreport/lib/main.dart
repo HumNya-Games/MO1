@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:hanbangreport/screen/logo_screen.dart';
 import 'package:hanbangreport/screen/title_screen.dart';
 import 'package:hanbangreport/screen/main_screen.dart';
@@ -8,6 +7,7 @@ import 'package:hanbangreport/screen/speech_setting_screen.dart';
 import 'package:hanbangreport/screen/report_list_screen.dart';
 
 void main() {
+  print('Flutter 앱 시작');
   runApp(const HanBangReportApp());
 }
 

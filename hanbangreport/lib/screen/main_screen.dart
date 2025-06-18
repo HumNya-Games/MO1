@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hanbangreport/widgets/bottom_nav_bar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hanbangreport/widgets/start_drive_dialog.dart';
+import 'package:flutter/services.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -32,24 +34,30 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  void _onDriveStartConfirmed() {
-    // 팝업 확인 후 처리 로직 (예: 운행 시작 상태 변경, 위치 및 시간 저장 등)
-    // 지금은 단순 로그 출력
-    debugPrint('운행 시작 확인됨');
+  /// 운행 시작 버튼 클릭 처리
+  void _onDriveStartButtonPressed() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dontShow = prefs.getBool('dont_show_start_drive_dialog') ?? false;
+
+    if (dontShow) {
+      _startDrivingMode();
+    } else {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => StartDriveDialog(onConfirmed: _startDrivingMode),
+      );
+    }
   }
 
-  Future<void> _showStartDriveDialog() async {
-    await showDialog(
-      context: context,
-      barrierDismissible: false, // 바깥 터치로 닫기 방지
-      builder: (context) {
-        return StartDriveDialog(onConfirmed: _onDriveStartConfirmed);
-      },
-    );
-  }
+  /// 운행 모드 시작 (플로팅볼 서비스 실행 & 앱 백그라운드 이동)
+  void _startDrivingMode() {
+    const platform = MethodChannel('floating_ball_service');
 
-  void _handleDrivingButtonTap() {
-    _showStartDriveDialog();
+    platform.invokeMethod('startFloatingBall');
+
+    // 앱을 백그라운드로 이동
+    SystemNavigator.pop();
   }
 
   @override
@@ -65,9 +73,10 @@ class _MainScreenState extends State<MainScreen> {
           children: [
             const Expanded(child: SizedBox()),
 
+            // 운행 시작 버튼
             Center(
               child: GestureDetector(
-                onTap: _handleDrivingButtonTap,
+                onTap: _onDriveStartButtonPressed,
                 child: Image.asset(
                   'assets/images/driving_button.png',
                   width: MediaQuery.of(context).size.width * 0.5,
@@ -78,6 +87,7 @@ class _MainScreenState extends State<MainScreen> {
 
             const Expanded(child: SizedBox()),
 
+            // 현재 신고 현황 + 리스트 버튼 영역
             Column(
               children: [
                 Container(
