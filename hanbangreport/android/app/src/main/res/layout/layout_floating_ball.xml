@@ -21,4 +21,13 @@
         android:src="@drawable/ic_close"
         android:contentDescription="앱 종료" />
 
+    <ImageView
+        android:id="@+id/btn_temp_action"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/ic_temp_action"
+        android:layout_margin="8dp"
+        android:contentDescription="임시버튼" />
+
+
 </LinearLayout>

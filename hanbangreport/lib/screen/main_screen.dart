@@ -13,6 +13,13 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  static const platform = MethodChannel('com.hanbangreport/floating_ball');
+
+  @override
+  void initState() {
+    super.initState();
+    // MethodChannel 중복 리스너는 main.dart 쪽 navigatorKey 처리로 대체하므로 제거
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -52,12 +59,7 @@ class _MainScreenState extends State<MainScreen> {
 
   /// 운행 모드 시작 (플로팅볼 서비스 실행 & 앱 백그라운드 이동)
   void _startDrivingMode() {
-    const platform = MethodChannel('floating_ball_service');
-
     platform.invokeMethod('startFloatingBall');
-
-    // 앱을 백그라운드로 이동
-    SystemNavigator.pop();
   }
 
   @override
@@ -87,75 +89,78 @@ class _MainScreenState extends State<MainScreen> {
 
             const Expanded(child: SizedBox()),
 
-            // 현재 신고 현황 + 리스트 버튼 영역
-            Column(
-              children: [
-                Container(
-                  margin: const EdgeInsets.only(bottom: 11),
-                  decoration: BoxDecoration(
-                    image: const DecorationImage(
-                      image: AssetImage('assets/images/main_bar1.png'),
-                      fit: BoxFit.contain,
-                      isAntiAlias: true,
-                      filterQuality: FilterQuality.high,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.all(16),
-                  width: MediaQuery.of(context).size.width * 0.9,
-                  child: Column(
-                    children: const [
-                      Text(
-                        '현재 신고 현황',
-                        style: TextStyle(color: Colors.white, fontSize: 18),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        '총 9999건의 신고 처리 완료',
-                        style: TextStyle(color: Colors.white, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ),
-
-                _buildReportListButton(
-                  context,
-                  'assets/images/main_bar2.png',
-                  'assets/images/icon_in_progress.png',
-                  '접수 대기 중',
-                  '9999건',
-                  '/report_list',
-                ),
-                _buildReportListButton(
-                  context,
-                  'assets/images/main_bar2.png',
-                  'assets/images/icon_completed.png',
-                  '처리 완료',
-                  '9999건',
-                  '/report_list',
-                ),
-                _buildReportListButton(
-                  context,
-                  'assets/images/main_bar2.png',
-                  'assets/images/icon_rejected.png',
-                  '반려 신고',
-                  '9999건',
-                  '/report_list',
-                ),
-
-                const SizedBox(height: 20),
-
-                const Text(
-                  '자세한 사항을 확인하시려면 리스트를 선택하세요.',
-                  style: TextStyle(color: Colors.white, fontSize: 13),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
+            _buildReportStatusSection(),
           ],
         ),
       ),
+    );
+  }
+
+  // 신고 현황 및 버튼 영역 위젯 분리
+  Widget _buildReportStatusSection() {
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.only(bottom: 11),
+          decoration: BoxDecoration(
+            image: const DecorationImage(
+              image: AssetImage('assets/images/main_bar1.png'),
+              fit: BoxFit.contain,
+              isAntiAlias: true,
+              filterQuality: FilterQuality.high,
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          padding: const EdgeInsets.all(16),
+          width: MediaQuery.of(context).size.width * 0.9,
+          child: Column(
+            children: const [
+              Text(
+                '현재 신고 현황',
+                style: TextStyle(color: Colors.white, fontSize: 18),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '총 9999건의 신고 처리 완료',
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+
+        _buildReportListButton(
+          context,
+          'assets/images/main_bar2.png',
+          'assets/images/icon_in_progress.png',
+          '접수 대기 중',
+          '9999건',
+          '/report_list',
+        ),
+        _buildReportListButton(
+          context,
+          'assets/images/main_bar2.png',
+          'assets/images/icon_completed.png',
+          '처리 완료',
+          '9999건',
+          '/report_list',
+        ),
+        _buildReportListButton(
+          context,
+          'assets/images/main_bar2.png',
+          'assets/images/icon_rejected.png',
+          '반려 신고',
+          '9999건',
+          '/report_list',
+        ),
+
+        const SizedBox(height: 20),
+        const Text(
+          '자세한 사항을 확인하시려면 리스트를 선택하세요.',
+          style: TextStyle(color: Colors.white, fontSize: 13),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+      ],
     );
   }
 
