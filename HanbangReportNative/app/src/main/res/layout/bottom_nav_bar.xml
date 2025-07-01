@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="64dp"
+    android:orientation="horizontal"
+    android:background="@drawable/main_bottom_bar_bg"
+    android:gravity="center"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp">
+
+    <!-- 홈 아이콘 버튼 (좌측 마진) -->
+    <ImageButton
+        android:id="@+id/nav_home"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="0dp"
+        android:layout_marginEnd="8dp"
+        android:background="@android:color/transparent"
+        android:src="@drawable/icon_home"
+        android:contentDescription="홈"
+        android:scaleType="centerInside" />
+
+    <!-- 신고 아이콘 버튼 -->
+    <ImageButton
+        android:id="@+id/nav_report"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:background="@android:color/transparent"
+        android:src="@drawable/icon_report"
+        android:contentDescription="신고"
+        android:scaleType="centerInside" />
+
+    <!-- 음성 아이콘 버튼 -->
+    <ImageButton
+        android:id="@+id/nav_speech"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:background="@android:color/transparent"
+        android:src="@drawable/icon_speech"
+        android:contentDescription="음성"
+        android:scaleType="centerInside" />
+
+    <!-- 설정 아이콘 버튼 (우측 마진) -->
+    <ImageButton
+        android:id="@+id/nav_setting"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="0dp"
+        android:background="@android:color/transparent"
+        android:src="@drawable/icon_setting"
+        android:contentDescription="설정"
+        android:scaleType="centerInside" />
+
+</LinearLayout>
