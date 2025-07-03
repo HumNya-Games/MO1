@@ -5,53 +5,115 @@
     android:orientation="horizontal"
     android:background="@drawable/main_bottom_bar_bg"
     android:gravity="center"
-    android:paddingStart="16dp"
-    android:paddingEnd="16dp">
+    android:paddingStart="37dp"
+    android:paddingEnd="37dp">
 
     <!-- 홈 아이콘 버튼 (좌측 마진) -->
-    <ImageButton
-        android:id="@+id/nav_home"
+    <LinearLayout
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:layout_weight="1"
-        android:layout_marginEnd="8dp"
-        android:background="@android:color/transparent"
-        android:src="@drawable/icon_home"
-        android:contentDescription="홈"
-        android:scaleType="centerInside" />
+        android:orientation="vertical"
+        android:gravity="center">
+        <ImageButton
+            android:id="@+id/nav_home"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:src="@drawable/icon_home"
+            android:contentDescription="홈"
+            android:scaleType="centerInside" />
+        <TextView
+            android:id="@+id/nav_home_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="홈"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:layout_marginTop="-2dp"
+            android:layout_marginBottom="2dp"
+            android:gravity="center" />
+    </LinearLayout>
 
     <!-- 신고 아이콘 버튼 -->
-    <ImageButton
-        android:id="@+id/nav_report"
+    <LinearLayout
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:layout_weight="1"
-        android:background="@android:color/transparent"
-        android:src="@drawable/icon_report"
-        android:contentDescription="신고"
-        android:scaleType="centerInside" />
+        android:orientation="vertical"
+        android:gravity="center">
+        <ImageButton
+            android:id="@+id/nav_report"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:src="@drawable/icon_report"
+            android:contentDescription="리스트"
+            android:scaleType="centerInside" />
+        <TextView
+            android:id="@+id/nav_report_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="리스트"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:layout_marginTop="-2dp"
+            android:layout_marginBottom="2dp"
+            android:gravity="center" />
+    </LinearLayout>
 
     <!-- 음성 아이콘 버튼 -->
-    <ImageButton
-        android:id="@+id/nav_speech"
+    <LinearLayout
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:layout_weight="1"
-        android:background="@android:color/transparent"
-        android:src="@drawable/icon_speech"
-        android:contentDescription="음성"
-        android:scaleType="centerInside" />
+        android:orientation="vertical"
+        android:gravity="center">
+        <ImageButton
+            android:id="@+id/nav_speech"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:src="@drawable/icon_speech"
+            android:contentDescription="음성 설정"
+            android:scaleType="centerInside" />
+        <TextView
+            android:id="@+id/nav_speech_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="음성 설정"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:layout_marginTop="-2dp"
+            android:layout_marginBottom="2dp"
+            android:gravity="center" />
+    </LinearLayout>
 
     <!-- 설정 아이콘 버튼 (우측 마진) -->
-    <ImageButton
-        android:id="@+id/nav_setting"
+    <LinearLayout
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:layout_weight="1"
-        android:layout_marginStart="8dp"
-        android:background="@android:color/transparent"
-        android:src="@drawable/icon_setting"
-        android:contentDescription="설정"
-        android:scaleType="centerInside" />
+        android:orientation="vertical"
+        android:gravity="center">
+        <ImageButton
+            android:id="@+id/nav_setting"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:color/transparent"
+            android:src="@drawable/icon_setting"
+            android:contentDescription="설정"
+            android:scaleType="centerInside" />
+        <TextView
+            android:id="@+id/nav_setting_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="설정"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:layout_marginTop="-2dp"
+            android:layout_marginBottom="2dp"
+            android:gravity="center" />
+    </LinearLayout>
 
 </LinearLayout>

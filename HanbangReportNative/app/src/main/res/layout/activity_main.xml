@@ -101,12 +101,13 @@
                 android:background="@drawable/main_bar2"
                 android:gravity="center_vertical"
                 android:layout_marginTop="8dp"
-                android:paddingHorizontal="16dp">
+                android:paddingHorizontal="17dp">
 
                 <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="33dp"
+                    android:layout_height="50dp"
                     android:src="@drawable/icon_in_progress" />
+
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -132,11 +133,11 @@
                 android:background="@drawable/main_bar2"
                 android:gravity="center_vertical"
                 android:layout_marginTop="8dp"
-                android:paddingHorizontal="16dp">
+                android:paddingHorizontal="17dp">
 
                 <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="33dp"
+                    android:layout_height="50dp"
                     android:src="@drawable/icon_completed" />
                 <TextView
                     android:layout_width="0dp"
@@ -163,12 +164,13 @@
                 android:background="@drawable/main_bar2"
                 android:gravity="center_vertical"
                 android:layout_marginTop="8dp"
-                android:paddingHorizontal="16dp">
+                android:paddingHorizontal="17dp">
 
                 <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="33dp"
+                    android:layout_height="50dp"
                     android:src="@drawable/icon_rejected" />
+
                 <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
