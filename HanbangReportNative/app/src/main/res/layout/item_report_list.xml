@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/list"
+    android:padding="12dp"
+    android:layout_marginBottom="12dp">
+
+    <!-- 선택 아이콘 (왼쪽) -->
+    <ImageView
+        android:id="@+id/iv_select"
+        android:layout_width="17dp"
+        android:layout_height="17dp"
+        android:layout_alignParentStart="true"
+        android:layout_centerVertical="true"
+        android:src="@drawable/list_active"
+        android:visibility="gone" />
+
+    <!-- 썸네일 이미지 -->
+    <ImageView
+        android:id="@+id/iv_thumbnail"
+        android:layout_width="72dp"
+        android:layout_height="48dp"
+        android:layout_toEndOf="@id/iv_select"
+        android:layout_marginStart="12dp"
+        android:layout_centerVertical="true"
+        android:src="@drawable/ex_art1"
+        android:scaleType="centerCrop"
+        android:background="@android:color/black"
+        android:clipToOutline="true" />
+
+    <!-- 텍스트 정보 영역 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_toEndOf="@id/iv_thumbnail"
+        android:layout_marginStart="12dp"
+        android:orientation="vertical"
+        android:gravity="center_vertical">
+
+        <!-- 첫줄: 교통위반(왼쪽) + 날짜/시간(오른쪽) -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <TextView
+                android:id="@+id/tv_violation_type"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="교통 위반"
+                android:textSize="17sp"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:layout_alignParentStart="true" />
+            <TextView
+                android:id="@+id/tv_datetime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2024.07.05 12:12:59"
+                android:textSize="15sp"
+                android:textColor="#CCCCCC"
+                android:textStyle="bold"
+                android:layout_alignParentEnd="true"
+                android:layout_alignBaseline="@id/tv_violation_type" />
+        </RelativeLayout>
+
+        <!-- 둘째줄: 위치 -->
+        <TextView
+            android:id="@+id/tv_location"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="서울시 서대문구 홍제천로 4길 14"
+            android:textSize="13sp"
+            android:textColor="#CCCCCC"
+            android:layout_marginTop="5dp" />
+    </LinearLayout>
+
+</RelativeLayout> 

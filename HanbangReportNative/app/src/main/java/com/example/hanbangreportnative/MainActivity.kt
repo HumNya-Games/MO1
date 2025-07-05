@@ -51,6 +51,31 @@ class MainActivity : AppCompatActivity() {
         findViewById<BottomNavBar>(R.id.bottom_nav_bar).setCurrentScreen(0)
     }
 
+    override fun onResume() {
+        super.onResume()
+        updateReportCounts()
+    }
+
+    private fun updateReportCounts() {
+        val reportList = ReportDataStore.loadList(this)
+        val deletedCount = ReportDataStore.getDeletedCount(this)
+
+        // N1: 신고 대기 개수
+        val waitingCount = reportList.count { it.type == "신고 대기" }
+        findViewById<TextView>(R.id.tv_in_progress_count)?.text = "${waitingCount}건"
+
+        // N2: 신고 완료 개수
+        val completedCount = reportList.count { it.type == "신고 완료" }
+        findViewById<TextView>(R.id.tv_completed_count)?.text = "${completedCount}건"
+
+        // N3: 삭제된 신고 완료 개수
+        findViewById<TextView>(R.id.tv_rejected_count)?.text = "${deletedCount}건"
+
+        // N2+N3: 현재 신고 현황
+        val totalCount = completedCount + deletedCount
+        findViewById<TextView>(R.id.tv_total_count)?.text = "${totalCount}건"
+    }
+
     private fun navigateToReportList(status: String) {
         // 리포트 리스트 화면으로 이동하는 로직
         val intent = Intent(this, ReportListActivity::class.java).apply {

@@ -27,6 +27,7 @@ import androidx.core.app.NotificationCompat
 import android.util.Log
 import android.location.Geocoder
 import android.widget.ImageView
+import java.util.Random
 
 class FloatingBallService : Service() {
     private lateinit var windowManager: WindowManager
@@ -137,6 +138,7 @@ class FloatingBallService : Service() {
         floatingView?.findViewById<ImageButton>(R.id.btn_return)?.setOnClickListener {
             val intent = Intent(this, ReportListActivity::class.java)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.putExtra("from_floating_ball", true)
             startActivity(intent)
             stopSelf()
         }
@@ -179,7 +181,9 @@ class FloatingBallService : Service() {
             override fun onLocationChanged(location: Location) {
                 val lat = location.latitude
                 val lng = location.longitude
-                val time = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+                val time = SimpleDateFormat("yyyy.MM.dd HH:mm:ss", Locale.getDefault()).format(Date())
+                val date = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(Date())
+                
                 // 주소 변환(Geocoder)
                 var address = "위도: $lat, 경도: $lng"
                 try {
@@ -191,10 +195,35 @@ class FloatingBallService : Service() {
                 } catch (e: Exception) {
                     Log.e("FloatingBallService", "주소 변환 실패: ${e.message}")
                 }
-                val prefs = getSharedPreferences("report_data", Context.MODE_PRIVATE)
-                val count = prefs.getInt("count", 0)
-                prefs.edit().putString("report_data_$count", "$address\n$time").putInt("count", count + 1).apply()
-                Toast.makeText(this@FloatingBallService, "신고 데이터가 저장되었습니다.", Toast.LENGTH_SHORT).show()
+
+                // 고유 ID 생성 (날짜 + 5자리 순번)
+                val existingList = ReportDataStore.loadList(this@FloatingBallService)
+                val todayReports = existingList.filter { it.id.startsWith(date) }
+                val nextNumber = (todayReports.size + 1).toString().padStart(5, '0')
+                val id = "$date-$nextNumber"
+
+                // 위반 타입 랜덤 선택
+                val violationTypes = listOf("교통 위반", "신호 위반")
+                val violationType = violationTypes[Random().nextInt(violationTypes.size)]
+
+                // 새로운 신고 데이터 생성
+                val reportData = ReportData(
+                    id = id,
+                    type = "신고 대기",
+                    selected = false,
+                    violationType = violationType,
+                    datetime = time,
+                    location = address,
+                    thumbnail = "ex_art1"
+                )
+
+                // 데이터 저장
+                val success = ReportDataStore.addReport(this@FloatingBallService, reportData)
+                if (success) {
+                    Toast.makeText(this@FloatingBallService, "신고 데이터가 저장되었습니다.", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@FloatingBallService, "리스트가 가득찼습니다. 기존 리스트를 삭제해주세요.", Toast.LENGTH_LONG).show()
+                }
             }
             override fun onProviderEnabled(provider: String) {}
             override fun onProviderDisabled(provider: String) {}
