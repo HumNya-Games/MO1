@@ -2,4 +2,9 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="popup_check_bg_dark">#CC222222</color>
+    <color name="popup_confirm_green">#1BC47D</color>
+    <color name="popup_confirm_text">#FFFFFF</color>
+    <color name="check_text_pressed">#4D000000</color>
+    <color name="check_text_normal">#000000</color>
 </resources>

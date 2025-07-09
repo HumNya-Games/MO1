@@ -32,6 +32,14 @@ class ReportListActivity : AppCompatActivity() {
         setContentView(R.layout.activity_report_list)
         fromFloatingBall = intent.getBooleanExtra("from_floating_ball", false)
 
+        if (fromFloatingBall) {
+            try {
+                stopService(Intent(this, FloatingBallService::class.java))
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
         initViews()
         setupListeners()
         loadData()
@@ -201,18 +209,18 @@ class ReportListActivity : AppCompatActivity() {
     private fun moveSelectedToWaiting() {
         val selectedItems = adapter.getAllItems().filter { it.selected }
         if (selectedItems.isEmpty()) {
-            Toast.makeText(this, "선택된 항목이 없습니다.", Toast.LENGTH_SHORT).show()
+            ToastUtils.showCustomToast(this, "선택된 항목이 없습니다.")
             return
         }
         
         if (currentTab == "신고 대기") {
             // 신고 대기 탭: 신고 완료로 변경
             selectedItems.forEach { it.type = "신고 완료"; it.selected = false }
-            Toast.makeText(this, "선택된 항목이 신고 완료되었습니다.", Toast.LENGTH_SHORT).show()
+            ToastUtils.showCustomToast(this, "선택된 항목이 신고 완료되었습니다.")
         } else {
             // 신고 완료 탭: 대기로 이동
             selectedItems.forEach { it.type = "신고 대기"; it.selected = false }
-            Toast.makeText(this, "선택된 항목이 대기로 이동되었습니다.", Toast.LENGTH_SHORT).show()
+            ToastUtils.showCustomToast(this, "선택된 항목이 대기로 이동되었습니다.")
         }
         
         saveData()
@@ -223,7 +231,7 @@ class ReportListActivity : AppCompatActivity() {
     private fun deleteSelectedItems() {
         val selectedItems = adapter.getAllItems().filter { it.selected }
         if (selectedItems.isEmpty()) {
-            Toast.makeText(this, "선택된 항목이 없습니다.", Toast.LENGTH_SHORT).show()
+            ToastUtils.showCustomToast(this, "선택된 항목이 없습니다.")
             return
         }
         // 삭제
@@ -232,7 +240,7 @@ class ReportListActivity : AppCompatActivity() {
         ReportDataStore.increaseDeletedCount(this, deletedCount)
         saveData()
         filterAndDisplayData()
-        Toast.makeText(this, "선택된 항목이 삭제되었습니다.", Toast.LENGTH_SHORT).show()
+        ToastUtils.showCustomToast(this, "선택된 항목이 삭제되었습니다.")
         updateEditButtons()
     }
 
@@ -256,6 +264,7 @@ class ReportListActivity : AppCompatActivity() {
 
     override fun onBackPressed() {
         handleBack()
+        super.onBackPressed()
     }
 
     private fun applyTabGroupBackground() {

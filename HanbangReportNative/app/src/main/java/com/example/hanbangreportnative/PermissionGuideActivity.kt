@@ -43,6 +43,11 @@ class PermissionGuideActivity : Activity() {
             showLocationPermissionDialog()
             return
         }
+        // Android 11 이상: 백그라운드 위치 권한 별도 체크
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            showBackgroundLocationPermissionDialog()
+            return
+        }
         // 모든 권한이 있으면 메인으로 이동
         startActivity(Intent(this, MainActivity::class.java))
         finish()
@@ -57,7 +62,7 @@ class PermissionGuideActivity : Activity() {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1002)
             }
             .setNegativeButton("나중에") { _, _ ->
-                Toast.makeText(this, "알림 권한이 없으면 일부 기능이 제한될 수 있습니다.", Toast.LENGTH_SHORT).show()
+                ToastUtils.showCustomToast(this, "알림 권한이 없으면 일부 기능이 제한될 수 있습니다.")
                 // 알림 권한 없이도 위치 권한 안내로 진행
                 showLocationPermissionDialog()
             }
@@ -80,7 +85,23 @@ class PermissionGuideActivity : Activity() {
                 ActivityCompat.requestPermissions(this, permissions.toTypedArray(), 1003)
             }
             .setNegativeButton("나중에") { _, _ ->
-                Toast.makeText(this, "위치 권한이 없으면 일부 기능이 제한될 수 있습니다.", Toast.LENGTH_SHORT).show()
+                ToastUtils.showCustomToast(this, "위치 권한이 없으면 일부 기능이 제한될 수 있습니다.")
+                startActivity(Intent(this, MainActivity::class.java))
+                finish()
+            }
+            .show()
+    }
+
+    private fun showBackgroundLocationPermissionDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("백그라운드 위치 권한 필요")
+            .setMessage("플로팅 볼이 백그라운드에서도 위치를 저장하려면 '항상 허용' 권한이 필요합니다.\n권한을 허용해 주세요.")
+            .setCancelable(false)
+            .setPositiveButton("권한 허용") { _, _ ->
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), 1010)
+            }
+            .setNegativeButton("나중에") { _, _ ->
+                ToastUtils.showCustomToast(this, "백그라운드 위치 권한이 없으면 일부 기능이 제한될 수 있습니다.")
                 startActivity(Intent(this, MainActivity::class.java))
                 finish()
             }
@@ -98,7 +119,7 @@ class PermissionGuideActivity : Activity() {
                     showLocationPermissionDialog()
                 }
             } else {
-                Toast.makeText(this, "오버레이 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
+                ToastUtils.showCustomToast(this, "오버레이 권한이 필요합니다.")
             }
         }
     }
@@ -109,11 +130,24 @@ class PermissionGuideActivity : Activity() {
             // 노티피케이션 권한 요청 결과 후 위치 권한 안내
             showLocationPermissionDialog()
         } else if (requestCode == 1003) {
-            // 위치 권한 요청 결과 후 메인으로 이동
+            // 위치 권한 요청 결과 후 백그라운드 권한 체크
             if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                Toast.makeText(this, "위치 권한이 허용되었습니다.", Toast.LENGTH_SHORT).show()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    showBackgroundLocationPermissionDialog()
+                    return
+                }
+                ToastUtils.showCustomToast(this, "위치 권한이 허용되었습니다.")
             } else {
-                Toast.makeText(this, "위치 권한이 필요합니다.", Toast.LENGTH_SHORT).show()
+                ToastUtils.showCustomToast(this, "위치 권한이 필요합니다.")
+            }
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+        } else if (requestCode == 1010) {
+            // 백그라운드 위치 권한 요청 결과
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                ToastUtils.showCustomToast(this, "백그라운드 위치 권한이 허용되었습니다.")
+            } else {
+                ToastUtils.showCustomToast(this, "백그라운드 위치 권한이 필요합니다.")
             }
             startActivity(Intent(this, MainActivity::class.java))
             finish()

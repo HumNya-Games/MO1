@@ -24,7 +24,7 @@ class SettingActivity : AppCompatActivity() {
             // 다시 보지 않기 상태 초기화
             val drivePrefs = getSharedPreferences("drive_prefs", Context.MODE_PRIVATE)
             drivePrefs.edit().clear().apply()
-            Toast.makeText(this, "데이터가 초기화되었습니다.", Toast.LENGTH_SHORT).show()
+            ToastUtils.showCustomToast(this, "데이터가 초기화되었습니다.")
         }
     }
 }

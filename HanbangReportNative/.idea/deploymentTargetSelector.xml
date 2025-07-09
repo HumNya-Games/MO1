@@ -4,7 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-07-03T16:49:25.061322100Z">
+        <DropdownSelection timestamp="2025-07-09T18:13:03.620145200Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\CHSey\.android\avd\HanBangNT.avd" />

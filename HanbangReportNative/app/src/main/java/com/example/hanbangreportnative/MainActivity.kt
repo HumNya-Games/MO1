@@ -23,6 +23,7 @@ import android.widget.Toast
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import android.util.Log
+import android.view.ViewGroup
 
 class MainActivity : AppCompatActivity() {
     private lateinit var bottomNavBar: BottomNavBar
@@ -107,33 +108,35 @@ class MainActivity : AppCompatActivity() {
                 super.onCreate(savedInstanceState)
                 val view = LayoutInflater.from(context).inflate(R.layout.dialog_drive_start, null)
                 setContentView(view)
-                // 검은색 알파 배경 적용
+                // 검은색 알파 배경 적용 및 전체 화면 덮기
                 window?.setBackgroundDrawable(ColorDrawable(Color.parseColor("#80000000")))
+                window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 setCancelable(true) // 바깥 터치 및 뒤로가기 허용
+                setCanceledOnTouchOutside(true) // 바깥 터치 시 닫힘 유지
+                
+                // 배경 터치 시 팝업 닫기
+                view.setOnTouchListener { _, event ->
+                    if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                        dismiss()
+                        true
+                    } else {
+                        false
+                    }
+                }
+                
                 val checkIcon = view.findViewById<ImageView>(R.id.iv_check)
                 val checkText = view.findViewById<TextView>(R.id.tv_check_text)
                 val btnConfirm = view.findViewById<Button>(R.id.btn_confirm)
-                // 하단 녹색 안내 버튼 동적 추가
-                val greenBtn = Button(context).apply {
-                    text = "다음부터 안내 보지 않기"
-                    setTextColor(Color.parseColor("#1ED760"))
-                    textSize = 16f
-                    setBackgroundResource(R.drawable.check_bg_on)
-                    visibility = View.GONE
-                }
-                val parent = view as? android.widget.LinearLayout
-                parent?.addView(greenBtn)
+                btnConfirm.backgroundTintList = null
                 fun updateCheckUI() {
                     if (checked) {
                         checkIcon.setImageResource(R.drawable.ic_check_on)
                         checkIcon.setBackgroundResource(R.drawable.check_bg_on)
                         checkText.setTextColor(Color.parseColor("#1ED760"))
-                        greenBtn.visibility = View.VISIBLE
                     } else {
                         checkIcon.setImageResource(R.drawable.ic_check_off)
                         checkIcon.setBackgroundResource(R.drawable.check_bg_off)
-                        checkText.setTextColor(Color.parseColor("#CCCCCC"))
-                        greenBtn.visibility = View.GONE
+                        checkText.setTextColor(Color.parseColor("#000000"))
                     }
                 }
                 updateCheckUI()
@@ -162,13 +165,13 @@ class MainActivity : AppCompatActivity() {
         Log.d("MainActivity", "startFloatingBallService() 호출")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             Log.e("MainActivity", "오버레이 권한 없음")
-            Toast.makeText(this, "플로팅 볼 오버레이 권한이 필요합니다. 설정에서 권한을 허용해 주세요.", Toast.LENGTH_LONG).show()
+            ToastUtils.showCustomToast(this, "플로팅 볼 오버레이 권한이 필요합니다. 설정에서 권한을 허용해 주세요.")
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ActivityCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             Log.e("MainActivity", "노티피케이션 권한 없음")
-            Toast.makeText(this, "플로팅 볼 알림 권한이 필요합니다. 설정에서 권한을 허용해 주세요.", Toast.LENGTH_LONG).show()
+            ToastUtils.showCustomToast(this, "플로팅 볼 알림 권한이 필요합니다. 설정에서 권한을 허용해 주세요.")
             return
         }
         val intent = Intent(this, FloatingBallService::class.java)
