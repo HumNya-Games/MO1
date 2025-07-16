@@ -27,6 +27,7 @@ import android.view.ViewGroup
 
 class MainActivity : AppCompatActivity() {
     private lateinit var bottomNavBar: BottomNavBar
+    private val REQUEST_MIC_PERMISSION = 3001
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -174,6 +175,11 @@ class MainActivity : AppCompatActivity() {
             ToastUtils.showCustomToast(this, "플로팅 볼 알림 권한이 필요합니다. 설정에서 권한을 허용해 주세요.")
             return
         }
+        // 마이크 권한 체크 및 요청
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.RECORD_AUDIO), REQUEST_MIC_PERMISSION)
+            return
+        }
         val intent = Intent(this, FloatingBallService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Log.d("MainActivity", "startForegroundService 호출")
@@ -182,5 +188,32 @@ class MainActivity : AppCompatActivity() {
             Log.d("MainActivity", "startService 호출")
             startService(intent)
         }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_MIC_PERMISSION) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // 권한 승인 시 플로팅 볼 서비스 시작
+                startFloatingBallService()
+            } else {
+                ToastUtils.showCustomToast(this, "마이크 권한이 없으면 음성인식 기능이 제한됩니다.")
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // 앱 종료 시 플로팅 볼 서비스 중지
+        stopFloatingBallService()
+        // 앱 완전 종료
+        android.os.Process.killProcess(android.os.Process.myPid())
+        System.exit(0)
+    }
+
+    private fun stopFloatingBallService() {
+        Log.d("MainActivity", "stopFloatingBallService() 호출")
+        val intent = Intent(this, FloatingBallService::class.java)
+        stopService(intent)
     }
 }

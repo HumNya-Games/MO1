@@ -51,6 +51,12 @@ class ReportListActivity : AppCompatActivity() {
         updateEditButtons()
     }
 
+    override fun onResume() {
+        super.onResume()
+        loadData()
+        updateUI()
+    }
+
     private fun initViews() {
         listView = findViewById(R.id.report_list_view)
         tvNoData = findViewById(R.id.tv_no_data)

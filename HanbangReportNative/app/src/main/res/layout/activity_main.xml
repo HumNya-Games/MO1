@@ -112,7 +112,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="접수 중"
+                    android:text="신고 대기"
                     android:textColor="#FFFFFF"
                     android:textSize="16sp"
                     android:layout_marginStart="12dp" />
@@ -144,7 +144,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="처리 완료"
+                    android:text="신고 완료"
                     android:textColor="#FFFFFF"
                     android:textSize="16sp"
                     android:layout_marginStart="12dp" />
@@ -177,7 +177,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="반려 신고"
+                    android:text="삭제 리스트"
                     android:textColor="#FFFFFF"
                     android:textSize="16sp"
                     android:layout_marginStart="12dp" />

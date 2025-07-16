@@ -8,7 +8,7 @@
     <!-- 상태바/노치 여백 -->
     <View
         android:layout_width="match_parent"
-        android:layout_height="57dp"
+        android:layout_height="27dp"
         android:background="#000000" />
 
     <!-- 상단 영역: 백버튼 + 탭 그룹 -->

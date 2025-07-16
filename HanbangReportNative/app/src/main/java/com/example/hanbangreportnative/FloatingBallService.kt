@@ -30,6 +30,8 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import android.app.PendingIntent
 
+// SpeechService 관련 import 추가
+
 class FloatingBallService : Service() {
     private lateinit var windowManager: WindowManager
     private var floatingView: View? = null
@@ -38,21 +40,30 @@ class FloatingBallService : Service() {
     private var initialTouchX = 0f
     private var initialTouchY = 0f
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private var speechService: SpeechService? = null
+    private var lastReportId: String? = null // 최근 저장된 신고 id 보관
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
+        Log.d("FloatingBallService", "onCreate 진입 (서비스 생성/재시작)")
         super.onCreate()
         Log.d("FloatingBallService", "onCreate 진입")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !android.provider.Settings.canDrawOverlays(this)) {
-            Log.e("FloatingBallService", "오버레이 권한 없음, 서비스 중단")
-            stopSelf()
+            Log.e("FloatingBallService", "오버레이 권한 없음, 서비스 중단(실제 종료는 하지 않음, 안내만)")
+            // stopSelf() // 서비스 종료 금지, 안내만
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             androidx.core.app.ActivityCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            Log.e("FloatingBallService", "노티피케이션 권한 없음, 서비스 중단")
-            stopSelf()
+            Log.e("FloatingBallService", "노티피케이션 권한 없음, 서비스 중단(실제 종료는 하지 않음, 안내만)")
+            // stopSelf() // 서비스 종료 금지, 안내만
+            return
+        }
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "마이크 권한이 필요합니다. 설정에서 허용해 주세요.", Toast.LENGTH_LONG).show()
+            Log.e("FloatingBallService", "마이크 권한 없음, 서비스 중단(실제 종료는 하지 않음, 안내만)")
+            // stopSelf() // 서비스 종료 금지, 안내만
             return
         }
         Log.d("FloatingBallService", "권한 모두 통과, ForegroundService 준비")
@@ -100,6 +111,54 @@ class FloatingBallService : Service() {
         Log.d("FloatingBallService", "addFloatingBall() 호출")
         addFloatingBall()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        // SpeechService 초기화만 하고 바로 시작하지 않음
+        speechService = SpeechService(this, object : SpeechService.Callback {
+            override fun onReportTrigger() {
+                // "신고" 트리거 인식 시 임시 저장(알림/안내 없음), type은 "내용 없음"으로 고정
+                saveReportData(voiceMode = true, voiceContent = "내용 없음", isFinal = false) { id ->
+                    lastReportId = id
+                }
+            }
+            override fun onReportContentResult(content: String) {
+                // 음성 인식 결과(실제 텍스트 또는 "내용 없음")를 violationType에 저장
+                // 직전 저장된 id의 신고 violationType만 갱신
+                lastReportId?.let { id ->
+                    ReportDataStore.updateReportViolationType(this@FloatingBallService, id, content) { updated ->
+                        if (updated) {
+                            showNotification("신고 데이터가 저장되었습니다.", false, 1001, true)
+                        } else {
+                            showNotification("신고 데이터 violationType 갱신 실패", false, 2008, false)
+                        }
+                    }
+                }
+            }
+            override fun onAppExit() {
+                // "앱 종료" 음성 인식 시 앱 종료
+                Log.d("FloatingBallService", "앱 종료 음성 인식됨")
+                showNotification("앱을 종료합니다.", false, 2001, false)
+                // 음성 서비스 종료
+                speechService?.destroy()
+                // 플로팅 볼 서비스 종료
+                stopSelf()
+                // 앱 완전 종료
+                android.os.Process.killProcess(android.os.Process.myPid())
+                System.exit(0)
+            }
+            override fun onError(error: String) {
+                Toast.makeText(this@FloatingBallService, error, Toast.LENGTH_SHORT).show()
+            }
+        })
+        // 플로팅 볼 생성 후 음성 인식 바로 시작
+        Log.d("FloatingBallService", "speechService?.start() 호출 직전")
+        speechService?.start()
+        Log.d("FloatingBallService", "speechService?.start() 호출 완료")
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d("FloatingBallService", "onStartCommand 진입 (서비스 시작/재시작)")
+        super.onStartCommand(intent, flags, startId)
+        return super.onStartCommand(intent, flags, startId)
     }
 
     private fun addFloatingBall() {
@@ -166,17 +225,23 @@ class FloatingBallService : Service() {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             intent.putExtra("from_floating_ball", true)
             startActivity(intent)
-            stopSelf()
+            // stopSelf() // 서비스 종료 금지, 안내만
         }
         // 앱 종료 버튼
         floatingView?.findViewById<ImageButton>(R.id.btn_close)?.setOnClickListener {
             showNotification("앱을 종료합니다.", false, 2001, false)
+            // 음성 서비스 종료
+            speechService?.destroy()
+            // 플로팅 볼 서비스 종료
             stopSelf()
+            // 앱 완전 종료
             android.os.Process.killProcess(android.os.Process.myPid())
+            System.exit(0)
         }
         // 임시 신고 버튼
         floatingView?.findViewById<ImageButton>(R.id.btn_report)?.setOnClickListener {
-            saveReportData()
+            // 음성 인식 시작
+            startVoiceRecognition()
         }
 
         try {
@@ -198,17 +263,36 @@ class FloatingBallService : Service() {
         }
     }
 
-    private fun saveReportData() {
+    /**
+     * 음성 인식 시작
+     */
+    private fun startVoiceRecognition() {
+        Log.d("FloatingBallService", "음성 인식 시작")
+        showNotification("음성 인식이 시작되었습니다. '신고'라고 말씀해주세요.", false, 1003, false)
+        speechService?.start()
+    }
+
+    /**
+     * @param isFinal true: 신고 내용(type) 최종 저장 시(알림/안내 출력), false: 임시 저장(알림 없음)
+     * @return 저장된 신고 id(고유번호), 실패 시 null
+     */
+    private fun saveReportData(
+        voiceMode: Boolean = false,
+        voiceContent: String? = null,
+        isFinal: Boolean = false,
+        onSaved: ((String?) -> Unit)? = null
+    ) {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
             ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             showNotification("위치 권한이 필요합니다.", false, 2003, false)
+            onSaved?.invoke(null)
             return
         }
-        // FusedLocationProviderClient로 위치 요청
         fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
             .addOnSuccessListener { location ->
                 if (location == null) {
                     showNotification("위치 정보를 가져올 수 없습니다.", false, 2004, false)
+                    onSaved?.invoke(null)
                     return@addOnSuccessListener
                 }
                 val lat = location.latitude
@@ -234,27 +318,34 @@ class FloatingBallService : Service() {
                 // 위반 타입 랜덤 선택
                 val violationTypes = listOf("교통 위반", "신호 위반")
                 val violationType = violationTypes[Random().nextInt(violationTypes.size)]
+                // type 값 결정
+                val typeValue = "신고 대기" // 항상 "신고 대기"로 고정
+                val violationTypeValue = voiceContent ?: "내용 없음" // 신고 내용 또는 "내용 없음"
                 // 새로운 신고 데이터 생성
                 val reportData = ReportData(
                     id = id,
-                    type = "신고 대기",
+                    type = typeValue,
                     selected = false,
-                    violationType = violationType,
+                    violationType = violationTypeValue,
                     datetime = time,
                     location = address,
                     thumbnail = "ex_art1"
                 )
-                // 데이터 저장
-                val success = ReportDataStore.addReport(this@FloatingBallService, reportData)
-                if (success) {
+                // 데이터 저장 (콜백 기반으로 변경)
+                ReportDataStore.addReport(this@FloatingBallService, reportData) { savedId ->
+                    if (savedId != null && isFinal) {
                     showNotification("신고 데이터가 저장되었습니다.", false, 1001, true)
-                } else {
+                    }
+                    if (savedId == null) {
                     showNotification("리스트가 가득찼습니다. 기존 리스트를 삭제해주세요.", false, 2006, false)
+                    }
+                    onSaved?.invoke(savedId)
                 }
             }
             .addOnFailureListener { e ->
                 showNotification("위치 정보를 가져오는 데 실패했습니다.", false, 2007, false)
                 Log.e("FloatingBallService", "위치 요청 실패: "+e.message)
+                onSaved?.invoke(null)
                 }
             }
 
@@ -315,8 +406,12 @@ class FloatingBallService : Service() {
     }
 
     override fun onDestroy() {
+        Log.d("FloatingBallService", "onDestroy 진입 (서비스 종료)")
         super.onDestroy()
-        Log.d("FloatingBallService", "onDestroy 호출")
         if (floatingView != null) windowManager.removeView(floatingView)
+        // 서비스 종료 시 음성 인식 중단
+        speechService?.stop()
+        // 플로팅 볼 서비스 완전 종료
+        stopSelf()
     }
 }

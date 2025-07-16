@@ -35,24 +35,26 @@
 
         <activity
             android:name=".LogoActivity"
-            android:exported="true">
+            android:exported="true"
+            android:excludeFromRecents="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".TitleActivity" />
-        <activity android:name=".MainActivity" android:exported="true" />
-        <activity android:name=".ReportListActivity" />
-        <activity android:name=".SpeechSettingActivity" />
-        <activity android:name=".SettingActivity" />
-        <activity android:name=".PermissionGuideActivity" />
+        <activity android:name=".TitleActivity" android:excludeFromRecents="true" />
+        <activity android:name=".MainActivity" android:exported="true" android:excludeFromRecents="true" />
+        <activity android:name=".ReportListActivity" android:excludeFromRecents="true" />
+        <activity android:name=".SpeechSettingActivity" android:excludeFromRecents="true" />
+        <activity android:name=".SettingActivity" android:excludeFromRecents="true" />
+        <activity android:name=".PermissionGuideActivity" android:excludeFromRecents="true" />
 
         <service
             android:name=".FloatingBallService"
             android:exported="false"
             android:enabled="true"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location|microphone"
+            android:stopWithTask="true" />
 
     </application>
 

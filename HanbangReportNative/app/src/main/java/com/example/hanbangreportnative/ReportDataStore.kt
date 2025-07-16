@@ -23,12 +23,15 @@ object ReportDataStore {
         prefs.edit().putString(KEY_LIST, gson.toJson(list)).apply()
     }
 
-    fun addReport(context: Context, report: ReportData): Boolean {
+    fun addReport(context: Context, report: ReportData, callback: (String?) -> Unit) {
         val list = loadList(context)
-        if (list.size >= MAX_SIZE) return false
-        list.add(0, report) // 최신순 정렬(최상단 추가)
+        if (list.size >= MAX_SIZE) {
+            callback(null)
+            return
+        }
+        list.add(0, report)
         saveList(context, list)
-        return true
+        callback(report.id)
     }
 
     fun updateList(context: Context, list: List<ReportData>) {
@@ -54,5 +57,17 @@ object ReportDataStore {
     fun resetDeletedCount(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putInt(KEY_DELETED_COUNT, 0).apply()
+    }
+
+    fun updateReportViolationType(context: Context, id: String, newViolationType: String, callback: (Boolean) -> Unit) {
+        val list = loadList(context)
+        val idx = list.indexOfFirst { it.id == id }
+        if (idx != -1) {
+            list[idx].violationType = newViolationType
+            saveList(context, list)
+            callback(true)
+        } else {
+            callback(false)
+        }
     }
 } 
