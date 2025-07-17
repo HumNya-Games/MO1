@@ -15,6 +15,161 @@
         android:gravity="center"
         android:layout_gravity="center" />
 
+    <TextView
+        android:id="@+id/label_mic_sensitivity"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="마이크 민감도 조절 (0-5000)"
+        android:textSize="18sp"
+        android:textColor="#FFB300"
+        android:layout_gravity="center"
+        android:layout_marginTop="32dp"
+        android:layout_marginBottom="8dp" />
+
+    <SeekBar
+        android:id="@+id/seekbar_mic_sensitivity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:max="5000"
+        android:progress="2000"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/text_mic_sensitivity_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="2000"
+        android:textSize="16sp"
+        android:textColor="#FFFFFF"
+        android:layout_gravity="center"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:id="@+id/btn_advanced_settings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="고급 설정 보기"
+        android:textSize="16sp"
+        android:textColor="#4CAF50"
+        android:layout_gravity="center"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        android:padding="8dp"
+        android:background="@drawable/btn_confirm_bg" />
+
+    <LinearLayout
+        android:id="@+id/layout_advanced_settings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/label_high_sensitivity_threshold"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="높은 볼륨 임계값 (큰 소리 인식 기준)"
+            android:textSize="18sp"
+            android:textColor="#FFB300"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp" />
+
+        <SeekBar
+            android:id="@+id/seekbar_high_sensitivity_threshold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:max="5000"
+            android:progress="3000"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/text_high_sensitivity_threshold_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3000"
+            android:textSize="16sp"
+            android:textColor="#FFFFFF"
+            android:layout_gravity="center"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/label_medium_sensitivity_threshold"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="중간 볼륨 임계값 (중간 소리 인식 기준)"
+            android:textSize="18sp"
+            android:textColor="#FFB300"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp" />
+
+        <SeekBar
+            android:id="@+id/seekbar_medium_sensitivity_threshold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:max="5000"
+            android:progress="1500"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/text_medium_sensitivity_threshold_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1500"
+            android:textSize="16sp"
+            android:textColor="#FFFFFF"
+            android:layout_gravity="center"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 로그 간소화 설정 -->
+        <TextView
+            android:id="@+id/label_log_simplification"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="로그 간소화 (반복 로그 숨김)"
+            android:textSize="18sp"
+            android:textColor="#FFB300"
+            android:layout_gravity="center"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="OFF"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:layout_marginEnd="16dp" />
+
+            <Switch
+                android:id="@+id/switch_log_simplification"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="false" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ON"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:layout_marginStart="16dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
     <com.example.hanbangreportnative.BottomNavBar
         android:id="@+id/bottom_nav_bar"
         android:layout_width="match_parent"

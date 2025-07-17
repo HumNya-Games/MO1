@@ -1,744 +1,756 @@
 package com.example.hanbangreportnative
 
 import android.content.Context
-import android.os.Bundle
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
-import android.speech.tts.TextToSpeech
-import android.util.Log
-import java.util.*
-import kotlin.concurrent.timer
-import android.content.Intent
 import android.os.Handler
 import android.os.Looper
-import androidx.core.app.ActivityCompat
-import android.Manifest
-import android.content.pm.PackageManager
+import android.speech.tts.TextToSpeech
+import android.util.Log
+import org.vosk.Model
+import org.vosk.Recognizer
+import org.vosk.android.RecognitionListener as VoskRecognitionListener
+import org.vosk.android.SpeechService as VoskSpeechService
+import java.util.Locale
+import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.IOException
+import java.util.zip.ZipInputStream
+import android.content.SharedPreferences
+import android.preference.PreferenceManager
 import android.media.AudioManager
+import android.media.AudioRecord
+import android.speech.tts.UtteranceProgressListener
+
+// 오인식 트리거(유사어) 리스트 전역 관리 싱글톤
+object SimilarTriggerStore {
+    private const val PREFS_NAME = "speech_settings"
+    private const val KEY_SIMILAR_LIST = "trigger_similar_list"
+    private val defaultList = listOf(
+        "신구", "진구", "신후시인후", "시인",
+        "신고요", "신고오", "싱고", "신고우", "신고오요",
+        "신곡", "신공"
+    )
+    var triggerSimilarList: MutableList<String> = defaultList.toMutableList()
+
+    fun load(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val csv = prefs.getString(KEY_SIMILAR_LIST, null)
+        triggerSimilarList = if (csv.isNullOrBlank()) {
+            defaultList.toMutableList()
+        } else {
+            csv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+        }
+    }
+    fun save(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_SIMILAR_LIST, triggerSimilarList.joinToString(",")).apply()
+    }
+    fun add(word: String, context: Context? = null) {
+        if (!triggerSimilarList.contains(word)) {
+            triggerSimilarList.add(word)
+            context?.let { save(it) }
+        }
+    }
+    fun remove(word: String, context: Context? = null) {
+        if (triggerSimilarList.remove(word)) {
+            context?.let { save(it) }
+        }
+    }
+    fun resetToDefault(context: Context? = null) {
+        triggerSimilarList = defaultList.toMutableList()
+        context?.let { save(it) }
+    }
+}
+
+// 웨이크워드 리스트 전역 관리 싱글톤
+object WakeWordStore {
+    private const val PREFS_NAME = "speech_settings"
+    private const val KEY_WAKEWORD_LIST = "wakeword_list"
+    private val defaultList = listOf(
+        "신고", "신구", "진구", "신후시인후", "시인",
+        "신고요", "신고오", "싱고", "신고우", "신고오요",
+        "신곡", "신공", "신고 읍", "신고해", "신고해줘", "신고해라",
+        "신고요", "신고합니다", "신고해주세요", "신고해주세요요"
+    )
+    var wakeWordList: MutableList<String> = defaultList.toMutableList()
+
+    fun load(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val csv = prefs.getString(KEY_WAKEWORD_LIST, null)
+        wakeWordList = if (csv.isNullOrBlank()) {
+            defaultList.toMutableList()
+        } else {
+            csv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+        }
+    }
+    fun save(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_WAKEWORD_LIST, wakeWordList.joinToString(",")).apply()
+    }
+    fun add(word: String, context: Context? = null) {
+        if (!wakeWordList.contains(word)) {
+            wakeWordList.add(word)
+            context?.let { save(it) }
+        }
+    }
+    fun remove(word: String, context: Context? = null) {
+        if (wakeWordList.remove(word)) {
+            context?.let { save(it) }
+        }
+    }
+    fun resetToDefault(context: Context? = null) {
+        wakeWordList = defaultList.toMutableList()
+        context?.let { save(it) }
+    }
+}
+
+// 앱 종료 명령 리스트 전역 관리 싱글톤
+object AppExitWordStore {
+    private const val PREFS_NAME = "speech_settings"
+    private const val KEY_APPEXIT_LIST = "appexit_list"
+    private val defaultList = listOf(
+        "앱종료", "앱종요", "액중요", "액종료", "앱종", "앱종료해", "앱종료해라",
+        "앱종료해줘", "앱종료요", "앱종료합니다", "앱종료해주세요", "앱종료해주세요요"
+    )
+    var appExitWordList: MutableList<String> = defaultList.toMutableList()
+
+    fun load(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val csv = prefs.getString(KEY_APPEXIT_LIST, null)
+        appExitWordList = if (csv.isNullOrBlank()) {
+            defaultList.toMutableList()
+        } else {
+            csv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+        }
+    }
+    fun save(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_APPEXIT_LIST, appExitWordList.joinToString(",")).apply()
+    }
+    fun add(word: String, context: Context? = null) {
+        if (!appExitWordList.contains(word)) {
+            appExitWordList.add(word)
+            context?.let { save(it) }
+        }
+    }
+    fun remove(word: String, context: Context? = null) {
+        if (appExitWordList.remove(word)) {
+            context?.let { save(it) }
+        }
+    }
+    fun resetToDefault(context: Context? = null) {
+        appExitWordList = defaultList.toMutableList()
+        context?.let { save(it) }
+    }
+}
 
 class SpeechService(private val context: Context, private val callback: Callback) {
     interface Callback {
-        fun onReportTrigger() // "신고" 트리거 인식 시 호출
-        fun onReportContentResult(content: String) // 신고 내용(최대 12자) 결과
+        fun onReportTrigger() //신고리거 인식 시 호출
+        fun onReportContentResult(content: String) // 신고 내용(최대12 결과
         fun onAppExit() // "앱 종료" 인식 시 호출
         fun onError(error: String)
     }
 
     companion object {
-        // ====== 설정 포인트 ======
-        const val SILENCE_TIMEOUT_MS = 3000 // 무음 종료 시간(3초, ms)
-        const val MAX_TYPE_LENGTH = 12 // 신고 내용 최대 한글 12자
-        var speechLanguage: String = "ko-KR" // 음성 인식/안내 언어
-        var reportTriggerWord: String = "신고" // 트리거 키워드
-        var appExitWord: String = "앱 종료" // 앱 종료 키워드
-        // =========================
+        private const val TAG = "SpeechService"
+        private const val MAX_CONSECUTIVE_EMPTY_RESULTS = 5
+        private const val WAKEWORD_TIMEOUT_MS: Long = 30000
+        private const val REPORT_CONTENT_TIMEOUT_MS: Long = 15000
+        private const val MAX_TYPE_LENGTH = 10
+        private const val REPORT_GUIDE_TEXT = "신고 내용을 말씀해 주세요."
+        private const val REPORT_SAVE_TEXT = "신고 내용이 저장되었습니다."
     }
 
-    private var speechRecognizer: SpeechRecognizer? = null
+    // ====== 핵심 상태 관리 ======
+    private enum class RecognitionState {
+        IDLE,           // 대기 상태
+        WAKEWORD,       // 웨이크워드 인식 중
+        REPORT_CONTENT, // 신고 내용 인식 중
+        TTS_SPEAKING    // TTS 안내 중
+    }
+    
+    private var currentState = RecognitionState.IDLE
+    private var isServiceActive = false // 서비스 활성화 상태
+    private var isAppInForeground = false // 앱 포그라운드 상태
+
+    // ====== Vosk 관련 변수 ======
+    private var voskModel: Model? = null
+    private var currentRecognizer: Recognizer? = null
+    private var currentSpeechService: VoskSpeechService? = null
+    private var isVoskReady = false
+
+    // ====== TTS 관련 변수 ======
     private var tts: TextToSpeech? = null
-    private var isListening = false
-    private var silenceTimer: Timer? = null
-    private var isReportMode = false
-    private var reportContent = ""
-    private var reportContentTimer: Timer? = null
-    private var reportContentTimeoutMs = 10000L // 안내 후 10초 대기
-    private var lastErrorToastTime = 0L
-    private var retryCount = 0
-    private val MAX_RETRY = 5
-    private var noMatchCount = 0
-    private val MAX_NO_MATCH_COUNT = 3
-    private var isTriggerHandled = false // 트리거 인식 후 중복 진입 방지
-    private var isFirstSpeechRecognized = false // 최초 음성 인식 여부
-    private var recognizedText = "" // 인식된 텍스트 누적
-    private var originalVolume: Int? = null // TTS 볼륨 복원용
-    private var isReportContentFinished = false // 최종 저장/알림/안내 1회만 보장
+    private var ttsReady = false
 
-    fun start() {
-        Log.d("SpeechService", "=== SpeechService.start() 호출됨 ===")
-        if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-            Log.e("SpeechService", "SpeechRecognizer 사용 불가")
-            callback.onError("이 기기에서는 음성 인식 기능을 사용할 수 없습니다. (서비스 미설치/미지원)")
-            return
-        }
-        Log.d("SpeechService", "SpeechService 시작 - wake word 인식 모드")
+    // ====== 타이머 관리 ======
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var timeoutRunnable: Runnable? = null
+    private var silenceRunnable: Runnable? = null
+    private var lastRecognizedText = ""
+    private var consecutiveEmptyResults = 0
+    private var restartDelay = 1000
+    private var speechLanguage: String = "ko-KR"
+    private var reportTriggerWord: String = "신고"
+    private var appExitWord: String = "앱 종료"
+
+    // ====== 설정값 로드 ======
+    private var currentMicSensitivity = 2000
+    init {
+        loadSettings()
         initTTS()
-        safeInitSTT()
-        Log.d("SpeechService", "startWakeWordListening() 호출 직전")
-        startWakeWordListening() // wake word 인식 모드로 시작
-        Log.d("SpeechService", "startWakeWordListening() 호출 완료")
     }
 
-    fun stop() {
-        Log.d("SpeechService", "stop() 호출")
-        isListening = false
-        try {
-            speechRecognizer?.destroy()
-            speechRecognizer = null
-        } catch (e: Exception) {
-            Log.e("SpeechService", "speechRecognizer destroy 오류: ${e.message}")
-        }
+    private fun loadSettings() {
+        val prefs = context.getSharedPreferences("speech_settings", Context.MODE_PRIVATE)
+        currentMicSensitivity = prefs.getInt("mic_sensitivity", 2000)
+        SimilarTriggerStore.load(context)
+        WakeWordStore.load(context)
+        AppExitWordStore.load(context)
     }
 
-    fun destroy() {
-        Log.d("SpeechService", "destroy() 호출")
-        stop()
-        // 서비스 완전 종료
-        context?.let { ctx ->
-            val intent = Intent(ctx, SpeechService::class.java)
-            ctx.stopService(intent)
-        }
-    }
-
+    // ====== TTS 초기화 ======
     private fun initTTS() {
         if (tts == null) {
             tts = TextToSpeech(context) { status ->
-                if (status == TextToSpeech.SUCCESS) {
+                ttsReady = (status == TextToSpeech.SUCCESS)
+                if (ttsReady) {
                     tts?.language = Locale.forLanguageTag(speechLanguage)
                 }
             }
         }
     }
 
-    private fun safeInitSTT() {
-        runOnMainThread {
-            if (speechRecognizer != null) {
-                try {
-                    speechRecognizer?.destroy()
-                    Log.d("SpeechService", "기존 SpeechRecognizer destroy 완료")
-                } catch (e: Exception) {
-                    Log.e("SpeechService", "SpeechRecognizer destroy 중 예외", e)
-                }
-                speechRecognizer = null
-            }
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
-            Log.d("SpeechService", "SpeechRecognizer 새로 생성")
-        }
-    }
-
-    private fun runOnMainThread(action: () -> Unit) {
-        if (Looper.myLooper() == Looper.getMainLooper()) {
-            action()
-        } else {
-            Handler(Looper.getMainLooper()).post { action() }
-        }
-    }
-
-    private fun normalize(text: String?): String {
-        return text?.replace(" ", "")?.lowercase(Locale.getDefault()) ?: ""
-    }
-
-    // wake word("신고") 인식 대기: "신고"가 인식될 때까지 대기
-    private fun startWakeWordListening() {
-        runOnMainThread {
-            Log.d("SpeechService", "=== startWakeWordListening() 진입 ===")
-            if (isListening) {
-                Log.w("SpeechService", "startWakeWordListening: 이미 isListening=true, 중복 호출 방지")
-                return@runOnMainThread
-            }
-            // 기존 SpeechRecognizer 정리
-            safeDestroySTT()
-            isReportMode = false
-            isTriggerHandled = false
-            Log.d("SpeechService", "wake word 인식 설정 시작")
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 30000) // 30초로 증가 (시스템 최대값)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000) // 1초로 증가 (신고 내용과 동일)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 30000) // 30초로 증가 (시스템 최대값)
-                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
-                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-            }
-            Log.d("SpeechService", "Intent 설정 완료: $intent")
-            val hasMicPermission = ActivityCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-            Log.d("SpeechService", "startWakeWordListening: 마이크 권한=${hasMicPermission}")
-            if (!hasMicPermission) {
-                Log.e("SpeechService", "startWakeWordListening: 마이크 권한 없음, 음성 인식 불가")
-                callback.onError("마이크 권한이 없습니다. 설정에서 권한을 허용해 주세요.")
-                return@runOnMainThread
-            }
-            Log.d("SpeechService", "safeInitSTT() 호출 직전")
-            safeInitSTT()
-            Log.d("SpeechService", "safeInitSTT() 호출 완료, speechRecognizer=${speechRecognizer}")
-            Log.d("SpeechService", "wake word 인식 리스너 설정")
-            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-                override fun onResults(results: Bundle?) {
-                    Log.d("SpeechService", "[wake word] onResults: Bundle=$results")
-                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    Log.d("SpeechService", "[wake word] onResults: matches=$matches")
-                    
-                    if (!isTriggerHandled) {
-                        val normalizedMatches = matches?.map { normalize(it) } ?: emptyList()
-                        
-                        // "앱 종료" 키워드 확인
-                        if (normalizedMatches.any { it.contains(normalize(appExitWord)) }) {
-                            isTriggerHandled = true
-                            isListening = false
-                            retryCount = 0
-                            Log.d("SpeechService", "[wake word] 앱 종료 키워드 인식됨 → 앱 종료 (onResults)")
-                            safeDestroySTT()
-                            callback.onAppExit()
-                            return
-                        }
-                        
-                        // "신고" 키워드 확인
-                        if (normalizedMatches.any { it.contains(normalize(reportTriggerWord)) }) {
-                            isTriggerHandled = true
-                            isListening = false
-                            retryCount = 0
-                            Log.d("SpeechService", "[wake word] 신고 wake word 인식됨 → 신고 내용 입력 단계로 (onResults)")
-                            safeDestroySTT()
-                            callback.onReportTrigger()
-                            startReportContentFlow()
-                            return
-                        }
-                    }
-                    
-                    Log.d("SpeechService", "[wake word] wake word 미인식, 다시 대기")
-                    // wake word 미인식 시 다시 대기 (무한 반복 방지)
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        startWakeWordListening()
-                    }, 1000)
-                }
-                override fun onPartialResults(partialResults: Bundle?) {
-                    Log.d("SpeechService", "[wake word] onPartialResults: Bundle=$partialResults")
-                    val partial = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    Log.d("SpeechService", "[wake word] onPartialResults: partial=$partial")
-                    
-                    if (!isTriggerHandled) {
-                        val normalizedPartial = partial?.map { normalize(it) } ?: emptyList()
-                        
-                        // "앱 종료" 키워드 확인
-                        if (normalizedPartial.any { it.contains(normalize(appExitWord)) }) {
-                            isTriggerHandled = true
-                            isListening = false
-                            retryCount = 0
-                            Log.d("SpeechService", "[wake word] partial에서 앱 종료 키워드 인식됨 → 앱 종료 (onPartialResults)")
-                            safeDestroySTT()
-                            callback.onAppExit()
-                            return
-                        }
-                        
-                        // "신고" 키워드 확인
-                        if (normalizedPartial.any { it.contains(normalize(reportTriggerWord)) }) {
-                            isTriggerHandled = true
-                            isListening = false
-                            retryCount = 0
-                            Log.d("SpeechService", "[wake word] partial에서 신고 wake word 인식됨 → 신고 내용 입력 단계로 (onPartialResults)")
-                            safeDestroySTT()
-                            callback.onReportTrigger()
-                            startReportContentFlow()
-                        }
-                    }
-                }
-                override fun onEndOfSpeech() {
-                    isListening = false
-                    Log.d("SpeechService", "onEndOfSpeech: wake word 대기 종료")
-                }
-                override fun onError(error: Int) {
-                    isListening = false
-                    Log.e("SpeechService", "[wake word] onError: $error")
-                    
-                    if (!isTriggerHandled) {
-                        when (error) {
-                            7 -> { // SPEECH_TIMEOUT - 정상적인 타임아웃
-                                Log.d("SpeechService", "[wake word] SPEECH_TIMEOUT(7) - 정상적인 타임아웃, 1초 후 재시작")
-                                // 에러 7은 정상적인 타임아웃이므로 1초 후 재시작
-                                Handler(Looper.getMainLooper()).postDelayed({
-                                    startWakeWordListening()
-                                }, 1000)
-                            }
-                            SpeechRecognizer.ERROR_NO_MATCH -> {
-                                Log.d("SpeechService", "[wake word] NO_MATCH - 음성 미인식, 재시작")
-                                startWakeWordListening()
-                            }
-                            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> {
-                                Log.e("SpeechService", "[wake word] 권한 부족")
-                                callback.onError("마이크 권한이 없습니다. 설정에서 권한을 허용해 주세요.")
-                            }
-                            else -> {
-                                Log.e("SpeechService", "[wake word] 기타 오류: $error")
-                                // 기타 오류는 3초 후 재시작
-                                Handler(Looper.getMainLooper()).postDelayed({
-                                    startWakeWordListening()
-                                }, 3000)
-                            }
-                        }
-                    }
-                }
-                override fun onReadyForSpeech(params: Bundle?) {
-                    isListening = true
-                    Log.d("SpeechService", "onReadyForSpeech: wake word 대기 시작")
-                }
-                override fun onBeginningOfSpeech() { Log.d("SpeechService", "onBeginningOfSpeech") }
-                override fun onRmsChanged(rmsdB: Float) {}
-                override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onEvent(eventType: Int, params: Bundle?) {}
-            })
-            isListening = true
-            Log.d("SpeechService", "wake word 인식 시작 - startListening 호출")
-            speechRecognizer?.startListening(intent)
-            Log.d("SpeechService", "wake word 인식 시작 완료")
-        }
-    }
-
-    // 트리거(신고) 인식 대기: "신고"가 인식될 때까지 무한 반복
-    private fun startTriggerListening() {
-        runOnMainThread {
-            if (isListening) {
-                Log.w("SpeechService", "startTriggerListening: 이미 isListening=true, 중복 호출 방지")
-                return@runOnMainThread
-            }
-            isReportMode = false
-            isTriggerHandled = false // 트리거 대기 진입 시 초기화
-            // 트리거 대기 진입 시 재시작 카운터 초기화 (최대 재시작 횟수 도달 후 재진입하는 경우)
-            if (retryCount >= MAX_RETRY) {
-                retryCount = 0
-                Log.d("SpeechService", "[트리거] 최대 재시작 횟수 도달 후 재진입, 카운터 리셋")
-            }
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 8000) // 8초로 증가
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 500) // 0.5초로 감소
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 6000) // 6초 추가
-                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
-                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-                // 오프라인 모드에서 네트워크 관련 설정 제거
-                // putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true) // 이미 설정됨
-            }
-            val hasMicPermission = ActivityCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-            Log.d("SpeechService", "startTriggerListening: 마이크 권한=${hasMicPermission}")
-            if (!hasMicPermission) {
-                Log.e("SpeechService", "startTriggerListening: 마이크 권한 없음, 음성 인식 불가")
-                callback.onError("마이크 권한이 없습니다. 설정에서 권한을 허용해 주세요.")
-                return@runOnMainThread
-            }
-            safeInitSTT()
-            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-                override fun onResults(results: Bundle?) {
-                    Log.d("SpeechService", "[트리거] onResults: Bundle=$results")
-                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    Log.d("SpeechService", "[트리거] onResults: matches=$matches")
-                    if (!isTriggerHandled && matches?.any { normalize(it).contains(normalize(reportTriggerWord)) } == true) {
-                        isTriggerHandled = true
-                        isListening = false
-                        retryCount = 0 // 트리거 성공 시 카운터 리셋
-                        // voiceRecognitionTimer?.cancel() // 트리거 인식 시 타이머 취소 // 이 타이머는 제거되었으므로 이 줄도 제거
-                        Log.d("SpeechService", "[트리거] 신고 트리거 인식됨 → 신고 데이터 저장 및 내용 입력 단계로 (onResults)")
-                        safeDestroySTT()
-                        callback.onReportTrigger()
-                        startReportContentFlow()
-                    } else {
-                        Log.d("SpeechService", "[트리거] 트리거 미인식, 무한 반복 대기")
-                        startTriggerListening()
-                    }
-                }
-                override fun onPartialResults(partialResults: Bundle?) {
-                    Log.d("SpeechService", "[트리거] onPartialResults: Bundle=$partialResults")
-                    val partial = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    Log.d("SpeechService", "[트리거] onPartialResults: partial=$partial")
-                    if (!isTriggerHandled && partial?.any { normalize(it).contains(normalize(reportTriggerWord)) } == true) {
-                        isTriggerHandled = true
-                        isListening = false
-                        retryCount = 0 // 트리거 성공 시 카운터 리셋
-                        // voiceRecognitionTimer?.cancel() // 트리거 인식 시 타이머 취소 // 이 타이머는 제거되었으므로 이 줄도 제거
-                        Log.d("SpeechService", "[트리거] partial에서 신고 트리거 인식됨 → 신고 데이터 저장 및 내용 입력 단계로")
-                        safeDestroySTT()
-                        callback.onReportTrigger()
-                        startReportContentFlow()
-                    }
-                }
-                override fun onEndOfSpeech() {
-                    isListening = false
-                    Log.d("SpeechService", "onEndOfSpeech: 트리거 대기 종료")
-                }
-                override fun onError(error: Int) {
-                    isListening = false
-                    Log.e("SpeechService", "[트리거] onError: $error")
-                    
-                    if (!isTriggerHandled) {
-                        when (error) {
-                            7 -> { // SPEECH_TIMEOUT - 정상적인 타임아웃
-                                Log.d("SpeechService", "[트리거] SPEECH_TIMEOUT(7) - 정상적인 타임아웃, 재시작")
-                                // 1초 후 재시작 (너무 빈번한 재시작 방지)
-                                Handler(Looper.getMainLooper()).postDelayed({
-                                    startTriggerListening()
-                                }, 1000)
-                            }
-                            SpeechRecognizer.ERROR_NO_MATCH -> {
-                                Log.d("SpeechService", "[트리거] NO_MATCH - 음성 미인식, 재시작")
-                                startTriggerListening()
-                            }
-                            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> {
-                                Log.e("SpeechService", "[트리거] 권한 부족")
-                                callback.onError("마이크 권한이 없습니다. 설정에서 권한을 허용해 주세요.")
-                            }
-                            else -> {
-                                Log.e("SpeechService", "[트리거] 기타 오류: $error")
-                                // 기타 오류는 3초 후 재시작
-                                Handler(Looper.getMainLooper()).postDelayed({
-                                    startTriggerListening()
-                                }, 3000)
-                            }
-                        }
-                    }
-                }
-                override fun onReadyForSpeech(params: Bundle?) {
-                    isListening = true
-                    Log.d("SpeechService", "onReadyForSpeech: 트리거 대기 시작")
-                }
-                override fun onBeginningOfSpeech() { Log.d("SpeechService", "onBeginningOfSpeech") }
-                override fun onRmsChanged(rmsdB: Float) {}
-                override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onEvent(eventType: Int, params: Bundle?) {}
-            })
-            isListening = true
-            speechRecognizer?.startListening(intent)
-        }
-    }
-
-    private fun restartTriggerListening() {
-        runOnMainThread {
-            if (!isReportMode && !isListening) {
-                stopListening()
-                startTriggerListening()
-            } else {
-                Log.w("SpeechService", "restartTriggerListening: isReportMode=$isReportMode, isListening=$isListening, 재시작 생략")
-            }
-        }
-    }
-
-    private fun startReportContentFlow() {
-        runOnMainThread {
-            isReportMode = true
-            speak("신고 내용을 간단히 말씀해주세요") {
-                startReportContentListening()
-            }
-        }
-    }
-
-    private fun speak(text: String, onDone: () -> Unit) {
-        runOnMainThread {
-            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            val result = audioManager.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
-            val volume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-            val isMuted = audioManager.isStreamMute(AudioManager.STREAM_MUSIC)
-            Log.d("SpeechService", "TTS speak: $text, 오디오포커스=$result, 볼륨=$volume, 음소거=$isMuted")
-            // 볼륨 0일 때 임시로 5로 조정
-            if (volume == 0) {
-                originalVolume = 0
-                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 5, 0)
-                Log.d("SpeechService", "TTS 볼륨 0 → 5로 임시 조정")
-            } else {
-                originalVolume = null
-            }
-            // 음소거 상태 안내
-            if (isMuted) {
-                callback.onError("음성 안내가 음소거 상태입니다. 볼륨을 확인해 주세요.")
-                Log.w("SpeechService", "TTS 음소거 상태 안내 토스트")
-            }
-            tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) {
-                    Log.d("SpeechService", "TTS onStart: $text")
-                }
-                override fun onDone(utteranceId: String?) {
-                    Log.d("SpeechService", "TTS onDone: $text")
-                    // 볼륨 복원
-                    if (originalVolume != null) {
-                        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, originalVolume!!, 0)
-                        Log.d("SpeechService", "TTS 볼륨 복원: $originalVolume")
-                    }
-                    runOnMainThread { onDone() }
-                }
-                override fun onError(utteranceId: String?) {
-                    Log.d("SpeechService", "TTS onError: $text")
-                    if (originalVolume != null) {
-                        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, originalVolume!!, 0)
-                        Log.d("SpeechService", "TTS 볼륨 복원(오류): $originalVolume")
-                    }
-                    runOnMainThread { onDone() }
-                }
-            })
-            Log.d("SpeechService", "TTS speak: $text (QUEUE_ADD 실험)")
-            tts?.speak(text, TextToSpeech.QUEUE_ADD, null, "tts_id")
-        }
-    }
-
-    private fun startReportContentListening() {
-        runOnMainThread {
-            Log.d("SpeechService", "startReportContentListening() 진입");
-            isReportContentFinished = false // 플래그 초기화
-            if (isListening) {
-                Log.w("SpeechService", "startReportContentListening: 이미 isListening=true, 중복 호출 방지")
-                return@runOnMainThread
-            }
-            isListening = true
-            safeDestroySTT()
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
-            Log.d("SpeechService", "SpeechRecognizer 새로 생성(신고 내용)")
-            reportContent = ""
-            isFirstSpeechRecognized = false
-            recognizedText = ""
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
-                putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 10000)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 1000)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 10000)
-                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            }
-            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) {
-                    Log.d("SpeechService", "onReadyForSpeech(신고 내용)")
-                    startReportContentTimeout() // 10초 타이머 시작
-                }
-                override fun onBeginningOfSpeech() {
-                    Log.d("SpeechService", "onBeginningOfSpeech(신고 내용)")
-                    if (!isFirstSpeechRecognized) {
-                        isFirstSpeechRecognized = true
-                        cancelReportContentTimeout() // 10초 타이머 중지
-                        startSilenceTimer() // 3초 무음 타이머 시작
-                    } else {
-                        resetSilenceTimer() // 추가 인식 시 3초 타이머 리셋
-                    }
-                }
-                override fun onRmsChanged(rmsdB: Float) {}
-                override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onEndOfSpeech() {
-                    Log.d("SpeechService", "onEndOfSpeech(신고 내용)")
-                    isListening = false
-                    finishReportContentBySilence()
-                }
-                override fun onError(error: Int) {
-                    Log.e("SpeechService", "onError(신고 내용): $error")
-                    isListening = false
-                    val hasMicPermission = ActivityCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-                    when (error) {
-                        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> {
-                            if (!hasMicPermission) {
-                                showErrorToastOncePerInterval("마이크 권한이 없습니다. 설정에서 권한을 허용해 주세요.")
-                                Log.e("SpeechService", "onError(신고 내용): 마이크 권한 없음")
-                            } else {
-                                showErrorToastOncePerInterval("음성 인식 엔진 오류입니다. 잠시 후 다시 시도해 주세요. (오류코드: $error)")
-                                Log.e("SpeechService", "onError(신고 내용): 엔진 오류(권한은 있음) $error")
-                                if (retryCount < MAX_RETRY) {
-                                    retryCount++
-                                    Handler(Looper.getMainLooper()).postDelayed({
-                                        restartTriggerListening()
-                                    }, 3000)
-                                }
-                            }
-                        }
-                        SpeechRecognizer.ERROR_CLIENT, SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_SERVER -> {
-                            showErrorToastOncePerInterval("음성 인식 엔진 또는 네트워크 오류입니다. 잠시 후 다시 시도해 주세요. (오류코드: $error)")
-                            Log.e("SpeechService", "onError(신고 내용): 엔진/네트워크 오류 $error")
-                            if (retryCount < MAX_RETRY) {
-                                retryCount++
-                                Handler(Looper.getMainLooper()).postDelayed({
-                                    restartTriggerListening()
-                                }, 3000)
-                            }
-                        }
-                        7 -> {
-                            Log.d("SpeechService", "onError(신고 내용): SPEECH_TIMEOUT(7) - 음성 인식 재시작")
-                            // 에러 7은 단순 타임아웃이므로 음성 인식을 재시작
-                            if (isReportMode) {
-                                // 현재 음성 인식 중이면 재시작
-                                safeDestroySTT()
-                                startReportContentListening()
-                            }
-                        }
-                        else -> {
-                            showErrorToastOncePerInterval("음성 인식 오류: $error")
-                            Log.e("SpeechService", "onError(신고 내용): 기타 오류 $error")
-                            if (retryCount < MAX_RETRY) {
-                                retryCount++
-                                Handler(Looper.getMainLooper()).postDelayed({
-                                    restartTriggerListening()
-                                }, 3000)
-                            }
-                        }
-                    }
-                }
-                override fun onResults(results: Bundle?) {
-                    Log.d("SpeechService", "onResults(신고 내용): $results")
-                    isListening = false
-                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    val text = matches?.firstOrNull() ?: ""
-                    if (text.isNotBlank()) {
-                        // 안내 문구 필터링
-                        if (!text.contains("신고 내용을 간단히 말씀해 주세요")) {
-                            recognizedText = text.take(MAX_TYPE_LENGTH)
-                        }
-                    }
-                    finishReportContentBySilence()
-                }
-                override fun onPartialResults(partialResults: Bundle?) {
-                    val partial = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    Log.d("SpeechService", "onPartialResults(신고 내용): $partial")
-                    if (!partial.isNullOrEmpty()) {
-                        val text = partial[0].take(MAX_TYPE_LENGTH)
-                        // 안내 문구 필터링
-                        if (!text.contains("신고 내용을 간단히 말씀해 주세요")) {
-                            recognizedText = text
-                        }
-                    }
-                    if (isFirstSpeechRecognized) {
-                        resetSilenceTimer()
-                    }
-                }
-                override fun onEvent(eventType: Int, params: Bundle?) {
-                    Log.d("SpeechService", "onEvent(신고 내용): eventType=$eventType, params=$params")
-                }
-            })
-            speechRecognizer?.startListening(intent)
-            Log.d("SpeechService", "speechRecognizer?.startListening(intent) 호출(신고 내용)")
-        }
-    }
-
-    private fun startReportContentTimeout() {
-        reportContentTimer?.cancel()
-        reportContentTimer = timer(initialDelay = reportContentTimeoutMs, period = reportContentTimeoutMs) {
-            if (isListening && !isFirstSpeechRecognized) {
-                isListening = false
-                finishReportContentByTimeout()
-            }
-            reportContentTimer?.cancel()
-        }
-    }
-    private fun cancelReportContentTimeout() {
-        reportContentTimer?.cancel()
-    }
-    private fun startSilenceTimer() {
-        silenceTimer?.cancel()
-        silenceTimer = timer(initialDelay = SILENCE_TIMEOUT_MS.toLong(), period = SILENCE_TIMEOUT_MS.toLong()) {
-            if (isListening && isFirstSpeechRecognized) {
-                isListening = false
-                finishReportContentBySilence()
-            }
-            silenceTimer?.cancel()
-        }
-    }
-    private fun resetSilenceTimer() {
-        silenceTimer?.cancel()
-        startSilenceTimer()
-    }
-    private fun cancelSilenceTimer() {
-        silenceTimer?.cancel()
-    }
-    // 10초 타이머 만료: 아무 음성도 인식되지 않음
-    private fun finishReportContentByTimeout() {
-        runOnMainThread {
-            if (isReportContentFinished) return@runOnMainThread
-            isReportContentFinished = true
-            cancelSilenceTimer()
-            cancelReportContentTimeout()
-            recognizedText = "내용 없음"
-            Log.d("SpeechService", "[신고내용] 10초 타이머 만료, 내용없음 저장 및 wake word 대기 복귀")
-            callback.onReportContentResult(recognizedText)
-            speak("신고 내용이 저장되었습니다.") {
-                isReportMode = false
-                isListening = false
-                // 1초 후 wake word 대기 모드로 복귀 (안정성 향상)
-                Handler(Looper.getMainLooper()).postDelayed({
-                    startWakeWordListening()
-                }, 1000)
-            }
-        }
-    }
-    // 3초 무음: 인식된 내용 저장
-    private fun finishReportContentBySilence() {
-        runOnMainThread {
-            if (isReportContentFinished) return@runOnMainThread
-            isReportContentFinished = true
-            cancelSilenceTimer()
-            cancelReportContentTimeout()
-            val result = if (recognizedText.isBlank()) "내용 없음" else recognizedText.take(MAX_TYPE_LENGTH)
-            Log.d("SpeechService", "[신고내용] 3초 무음, 결과 저장: $result, wake word 대기 복귀")
-            callback.onReportContentResult(result)
-            speak("신고 내용이 저장되었습니다.") {
-                isReportMode = false
-                isListening = false
-                // 1초 후 wake word 대기 모드로 복귀 (안정성 향상)
-                Handler(Looper.getMainLooper()).postDelayed({
-                    startWakeWordListening()
-                }, 1000)
-            }
-        }
-    }
-
-    private fun stopListening() {
-        runOnMainThread {
-            if (!isListening) {
-                Log.d("SpeechService", "stopListening: 이미 isListening=false, 중복 호출 방지")
-                return@runOnMainThread
-            }
+    // ====== Vosk 모델 초기화 ======
+    private fun initVoskModel() {
+        if (voskModel == null) {
             try {
-                speechRecognizer?.stopListening()
-                Log.d("SpeechService", "stopListening() 호출")
-            } catch (e: Exception) {
-                Log.e("SpeechService", "stopListening 중 예외", e)
-            }
-            isListening = false
-        }
-    }
-
-    private fun showErrorToastOncePerInterval(error: String, intervalMs: Long = 3000) {
-        val now = System.currentTimeMillis()
-        if (now - lastErrorToastTime > intervalMs) {
-            callback.onError(error)
-            lastErrorToastTime = now
-        }
-    }
-
-    private fun isFatalError(error: Int): Boolean {
-        return error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ||
-               error == SpeechRecognizer.ERROR_CLIENT ||
-               error == SpeechRecognizer.ERROR_NETWORK ||
-               error == SpeechRecognizer.ERROR_SERVER
-    }
-
-    private fun handleError(error: Int) {
-        if (error == SpeechRecognizer.ERROR_NO_MATCH) {
-            noMatchCount++
-            Log.e("SpeechService", "NO_MATCH(7) 연속 발생: $noMatchCount")
-            if (noMatchCount >= MAX_NO_MATCH_COUNT) {
-                speak("음성이 인식되지 않아 음성 인식을 중단합니다.") {
-                    stopListening()
+                val modelDir = File(context.filesDir, "model-ko")
+                if (modelDir.exists()) deleteDir(modelDir)
+                
+                val assetList = context.assets.list("")?.toList() ?: emptyList()
+                val copied = if (assetList.contains("model-ko.zip")) {
+                    unzipModel(context, "model-ko.zip", modelDir)
+                } else {
+                    copyAssetFolder(context, "model-ko", modelDir.absolutePath)
                 }
-                noMatchCount = 0
+                
+                if (!copied) throw IOException("Vosk 모델 복사/압축 해제 실패")
+                if (!validateModelFiles(modelDir)) {
+                    throw IOException("Vosk 모델 파일 검증실패")
+                }
+                
+                voskModel = Model(modelDir.absolutePath)
+                isVoskReady = true
+                Log.d(TAG, "Vosk 모델 로딩 완료")
+            } catch (e: Exception) {
+                isVoskReady = false
+                Log.e(TAG, "Vosk 모델 로딩 실패: ${e.message}")
+                callback.onError(e.message ?: "Vosk 모델 로딩 실패")
+            }
+        }
+    }
+
+    // ====== 서비스 제어 ======
+    fun start() {
+        Log.d(TAG, "음성 인식 서비스 시작 요청")
+        
+        // 서비스 활성화 상태 설정
+        isServiceActive = true
+        currentState = RecognitionState.IDLE
+        
+        if (!canStartRecognition()) {
+            Log.d(TAG, "음성 인식 시작 조건 불만족 - 조건 확인")
+            Log.d(TAG, "isServiceActive: $isServiceActive, isAppInForeground: $isAppInForeground, currentState: $currentState")
+            return
+        }
+        
+        Log.d(TAG, "음성 인식 서비스 시작")
+        startWakeWordRecognition()
+    }
+
+    fun stop() {
+        Log.d(TAG, "음성 인식 서비스 중지")
+        isServiceActive = false
+        cleanupRecognition()
+        resetState()
+    }
+
+    fun destroy() {
+        stop()
+        tts?.shutdown()
+        tts = null
+    }
+
+    // ====== 상태 설정 ======
+    fun setFloatingBallActive(active: Boolean) {
+        Log.d(TAG, "플로팅 볼 활성화 상태: $active")
+        if (!active) {
+            stop()
+        }
+    }
+
+    fun setAppForegroundState(inForeground: Boolean) {
+        Log.d(TAG, "앱 포그라운드 상태: $inForeground")
+        isAppInForeground = inForeground
+        if (inForeground) {
+            stop()
+        }
+    }
+
+    // ====== 음성 인식 시작 조건 체크 ======
+    private fun canStartRecognition(): Boolean {
+        return isServiceActive && !isAppInForeground && currentState == RecognitionState.IDLE
+    }
+
+    // ====== 웨이크워드 인식 시작 ======
+    private fun startWakeWordRecognition() {
+        if (currentState != RecognitionState.IDLE) return
+        
+        Log.d(TAG, "워드 인식 시작")
+        currentState = RecognitionState.WAKEWORD
+        
+        if (!isVoskReady) {
+            initVoskModel()
+            if (!isVoskReady) {
+                resetState()
                 return
             }
-        } else {
-            noMatchCount = 0
         }
-        // 기존 오류 처리
-        startTriggerListening()
+        
+        cleanupRecognition()
+        createRecognizer()
+        startRecognition(WAKEWORD_TIMEOUT_MS)
     }
 
-    private fun safeDestroySTT() {
+    // ====== 웨이크워드 체크 ======
+    private fun isWakeWord(text: String): Boolean {
+        val normalized = text.replace("[^가-힣a-zA-Z0-9]".toRegex(), "").lowercase()
+        
+        // 정확한 매칭
+        for (word in WakeWordStore.wakeWordList) {
+            val normalizedWord = word.replace("[^가-힣a-zA-Z0-9]".toRegex(), "").lowercase()
+            if (normalized.contains(normalizedWord)) return true
+        }
+        
+        // 유사어 체크 (SimilarTriggerStore)
+        val words = normalized.split(" ").filter { it.isNotBlank() }
+        for (word in words) {
+            if (word.length >= 2) {
+                for (triggerWord in WakeWordStore.wakeWordList) {
+                    val normalizedTrigger = triggerWord.replace("[^가-힣a-zA-Z0-9]".toRegex(), "").lowercase()
+                    if (levenshtein(word, normalizedTrigger) <= 1) return true
+                }
+                if (SimilarTriggerStore.triggerSimilarList.contains(word)) return true
+            }
+        }
+        
+        return false
+    }
+
+    // ====== 앱 종료 명령 체크 ======
+    private fun isAppExitCommand(text: String): Boolean {
+        val normalized = text.replace("[^가-힣a-zA-Z0-9]".toRegex(), "").lowercase()
+        
+        // 정확한 매칭
+        for (word in AppExitWordStore.appExitWordList) {
+            val normalizedWord = word.replace("[^가-힣a-zA-Z0-9]".toRegex(), "").lowercase()
+            if (normalized.contains(normalizedWord)) return true
+        }
+        
+        // 유사어 체크 (Levenshtein 거리)
+        val words = normalized.split(" ").filter { it.isNotBlank() }
+        for (word in words) {
+            if (word.length >= 2) {
+                for (exitWord in AppExitWordStore.appExitWordList) {
+                    val normalizedExit = exitWord.replace("[^가-힣a-zA-Z0-9]".toRegex(), "").lowercase()
+                    if (levenshtein(word, normalizedExit) <= 1) return true
+                }
+            }
+        }
+        
+        return false
+    }
+
+    // ====== Levenshtein 거리 계산 ======
+    private fun levenshtein(a: String, b: String): Int {
+        val dp = Array(a.length + 1) { IntArray(b.length + 1) }
+        for (i in 0..a.length) dp[i][0] = i
+        for (j in 0..b.length) dp[0][j] = j
+        for (i in 1..a.length) {
+            for (j in 1..b.length) {
+                dp[i][j] = if (a[i - 1] == b[j - 1]) dp[i - 1][j - 1]
+                else minOf(dp[i - 1][j - 1], dp[i][j - 1], dp[i - 1][j]) + 1
+            }
+        }
+        return dp[a.length][b.length]
+    }
+
+    // ====== 신고 내용 인식 시작 ======
+    private fun startReportContentRecognition() {
+        if (!canStartRecognition()) {
+            Log.d(TAG, "신고 내용 인식 시작 조건 불만족")
+            return
+        }
+        
         try {
-            speechRecognizer?.destroy()
-            Log.d("SpeechService", "safeDestroySTT: SpeechRecognizer destroy 완료")
+            currentState = RecognitionState.REPORT_CONTENT
+            Log.d(TAG, "신고 내용 인식 시작")
+            // 신고 내용용 Recognizer 생성
+            createRecognizer()
+            startRecognition(REPORT_CONTENT_TIMEOUT_MS)
+            
         } catch (e: Exception) {
-            Log.e("SpeechService", "safeDestroySTT: destroy 중 예외", e)
+            Log.e(TAG, "신고 내용 인식 시작 오류: ${e.message}")
+            currentState = RecognitionState.IDLE
         }
-        speechRecognizer = null
     }
 
-    // 서비스 종료/재시작 로그 강화
-    fun onServiceCreate() {
-        Log.d("SpeechService", "[라이프사이클] onCreate 호출")
+    // ====== Recognizer 생성 ======
+    private fun createRecognizer() {
+        currentRecognizer = Recognizer(voskModel, 16000f)
+        try { 
+            currentRecognizer?.setWords(true) 
+            currentRecognizer?.setPartialWords(true) 
+        } catch (_: Exception) {}
+        
+        currentSpeechService = VoskSpeechService(currentRecognizer, 16000f)
     }
-    fun onServiceDestroy() {
-        Log.d("SpeechService", "[라이프사이클] onDestroy 호출")
+
+    // ====== 음성 인식 시작 ======
+    private fun startRecognition(timeoutMs: Long) {
+        currentSpeechService?.startListening(object : VoskRecognitionListener {
+            override fun onResult(hypothesis: String?) {
+                handleRecognitionResult(hypothesis, isFinal = true)
+            }
+            
+            override fun onPartialResult(hypothesis: String?) {
+                handleRecognitionResult(hypothesis, isFinal = false)
+            }
+            
+            override fun onFinalResult(hypothesis: String?) {
+                handleRecognitionResult(hypothesis, isFinal = true)
+            }
+            
+            override fun onError(e: java.lang.Exception?) {
+                Log.e(TAG, e.toString())
+                handleRecognitionError()
+            }
+            
+            override fun onTimeout() {
+                Log.d(TAG, "음성 인식 타임아웃")
+                handleRecognitionTimeout()
+            }
+        })
+        
+        // 타임아웃 설정
+        timeoutRunnable = Runnable {
+            Log.d(TAG, "타임아웃 발생")
+            handleRecognitionTimeout()
+        }
+        mainHandler.postDelayed(timeoutRunnable!!, timeoutMs)
     }
-}
+
+    // ====== 인식 결과 처리 ======
+    private fun handleRecognitionResult(hypothesis: String?, isFinal: Boolean) {
+        val recognizedText = extractText(hypothesis)?.trim() ?: ""
+        // 빈 결과는 무시하고 계속 인식 (무한 인식 유지)
+        if (recognizedText.isBlank()) {
+            return
+        }
+        
+        lastRecognizedText = recognizedText
+        Log.d(TAG, "인식결과:$recognizedText (상태: $currentState)")
+        
+        when (currentState) {
+            RecognitionState.WAKEWORD -> handleWakeWordResult(recognizedText, isFinal)
+            RecognitionState.REPORT_CONTENT -> handleReportContentResult(recognizedText, isFinal)
+            else -> {}
+        }
+    }
+
+    // ====== 웨이크워드 결과 처리 ======
+    private fun handleWakeWordResult(result: String, isFinal: Boolean) {
+        if (!isFinal) return
+        
+        // 앱 종료 명령 체크 (기존 방식 복원)
+        if (isAppExitCommand(result)) {
+            Log.d(TAG, "앱 종료 명령 인식")
+            callback.onAppExit()
+            return
+        }
+        
+        // 웨이크워드 체크 (기존 방식 복원)
+        if (isWakeWord(result)) {
+            Log.d(TAG, "웨이크워드 인식 성공: '$result'")
+            callback.onReportTrigger()
+            
+            // TTS 안내 후 신고 내용 인식 시작
+            speakGuideAndStartReportContent()
+            return
+        }
+        
+        // 웨이크워드가 아닌 경우 무시하고 계속 인식
+        Log.d(TAG, "웨이크워드가 아님: $result")
+    }
+
+    // ====== 신고 내용 결과 처리 ======
+    private fun handleReportContentResult(text: String, isFinal: Boolean) {
+        if (isFinal || text.length >= 3) {
+            Log.d(TAG, "신고 내용 인식 완료: '$text'")
+            cleanupRecognition()
+            
+            val finalText = if (text.isBlank()) "내용 없음" else text.take(MAX_TYPE_LENGTH)
+            callback.onReportContentResult(finalText)
+            
+            speakSaveCompleteAndRestart()
+        }
+    }
+
+    // ====== 음성 인식 오류 처리 ======
+    private fun handleRecognitionError() {
+        Log.d(TAG, "인식 오류발생")
+        cleanupRecognition()
+        restartRecognition()
+    }
+
+    // ====== 음성 인식 타임아웃 처리 ======
+    private fun handleRecognitionTimeout() {
+        Log.d(TAG, "음성 인식 타임아웃")
+        cleanupRecognition()
+        
+        when (currentState) {
+            RecognitionState.WAKEWORD -> restartRecognition()
+            RecognitionState.REPORT_CONTENT -> {
+                val finalText = if (lastRecognizedText.isBlank()) "내용 없음" else lastRecognizedText.take(MAX_TYPE_LENGTH)
+                callback.onReportContentResult(finalText)
+                speakSaveCompleteAndRestart()
+            }
+            else -> restartRecognition()
+        }
+    }
+
+    // ====== 재시작 로직 ======
+    private fun restartRecognition() {
+        if (currentState == RecognitionState.TTS_SPEAKING) {
+            Log.d(TAG, "TTS 중이므로 재시작 생략")
+            return
+        }
+        
+        try {
+            Log.d(TAG, "음성 인식 재시작")
+            
+            // 현재 인식 정리 후 즉시 재시작 (딜레이 없음)
+            cleanupRecognition()
+            
+            if (canStartRecognition()) {
+                startWakeWordRecognition()
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "재시작 오류: ${e.message}")
+        }
+    }
+
+    // ====== TTS 안내 및 신고 내용 인식 시작 ======
+    private fun speakGuideAndStartReportContent() {
+        currentState = RecognitionState.TTS_SPEAKING
+        speak(REPORT_GUIDE_TEXT) {
+            currentState = RecognitionState.IDLE
+            startReportContentRecognition()
+        }
+    }
+
+    // ====== TTS 저장 완료 안내 및 재시작 ======
+    private fun speakSaveCompleteAndRestart() {
+        currentState = RecognitionState.TTS_SPEAKING
+        speak(REPORT_SAVE_TEXT) {
+            currentState = RecognitionState.IDLE
+            restartRecognition()
+        }
+    }
+
+    // ====== TTS 제어 ======
+    private fun speak(text: String, onComplete: (() -> Unit)? = null) {
+        try {
+            // TTS 시작 시 현재 STT 완전 정리
+            cleanupRecognition()
+            
+            currentState = RecognitionState.TTS_SPEAKING
+            Log.d(TAG, "TTS 시작: $text")
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "utterance_${System.currentTimeMillis()}")
+            
+            // TTS 완료 콜백 설정
+            tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {
+                    Log.d(TAG, "TTS 시작됨: $utteranceId")
+                }
+                
+                override fun onDone(utteranceId: String?) {
+                    Log.d(TAG, "TTS 완료됨: $utteranceId")
+                    currentState = RecognitionState.IDLE
+                    onComplete?.invoke()
+                }
+                
+                override fun onError(utteranceId: String?) {
+                    Log.e(TAG, "TTS 오류: $utteranceId")
+                    currentState = RecognitionState.IDLE
+                    onComplete?.invoke()
+                }
+            })
+        } catch (e: Exception) {
+            Log.e(TAG, "TTS 오류: ${e.message}")
+            currentState = RecognitionState.IDLE
+            onComplete?.invoke()
+        }
+    }
+
+    // ====== 상태 초기화 ======
+    private fun resetState() {
+        currentState = RecognitionState.IDLE
+        lastRecognizedText = ""
+        consecutiveEmptyResults = 0
+    }
+
+    // ====== 음성 인식 정리 ======
+    private fun cleanupRecognition() {
+        timeoutRunnable?.let { mainHandler.removeCallbacks(it) }
+        silenceRunnable?.let { mainHandler.removeCallbacks(it) }
+        
+        try {
+            currentSpeechService?.stop()
+        } catch (e: Exception) {
+            Log.e(TAG, "SpeechService stop error", e)
+        }
+        
+        try {
+            currentRecognizer?.close()
+        } catch (e: Exception) {
+            Log.e(TAG, "Recognizer close error", e)
+        }
+        
+        currentSpeechService = null
+        currentRecognizer = null
+    }
+
+    // ====== 텍스트 추출 ======
+    private fun extractText(hypothesis: String?): String? {
+        if (hypothesis.isNullOrBlank()) return null
+        
+        return try {
+            // JSON 파싱 시도
+            val json = org.json.JSONObject(hypothesis)
+            if (json.has("text")) {
+                return json.getString("text")
+            }
+            if (json.has("partial")) {
+                return json.getString("partial")
+            }
+            
+            // 정규식으로 추출 시도
+            val textRegex = Regex("text\\s*:\\s*\"(.*?)\"")
+            val textMatch = textRegex.find(hypothesis)
+            if (textMatch != null) {
+                return textMatch.groups[1]?.value
+            }
+            
+            val partialRegex = Regex("partial\\s*:\\s*\"(.*?)\"")
+            val partialMatch = partialRegex.find(hypothesis)
+            if (partialMatch != null) {
+                return partialMatch.groups[1]?.value
+            }
+            
+            null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // ====== 파일 시스템 유틸리티 ======
+    private fun deleteDir(dir: File): Boolean {
+        if (dir.isDirectory) {
+            dir.listFiles()?.forEach { deleteDir(it) }
+        }
+        return dir.delete()
+    }
+
+    private fun copyAssetFolder(context: Context, assetPath: String, destPath: String): Boolean {
+        return try {
+            val assets = context.assets
+            val files = assets.list(assetPath) ?: return false
+            File(destPath).mkdirs()
+            for (file in files) {
+                val assetFilePath = if (assetPath.isEmpty()) file else "$assetPath/$file"
+                val destFilePath = "$destPath/$file"
+                val fileList = assets.list(assetFilePath)
+                if (fileList.isNullOrEmpty()) {
+                    copyAssetFile(context, assetFilePath, destFilePath)
+                } else {
+                    copyAssetFolder(context, assetFilePath, destFilePath)
+                }
+            }
+            true
+        } catch (e: IOException) {
+            Log.e(TAG, "[복사실패] $assetPath: ${e.message}", e)
+            false
+        }
+    }
+
+    private fun copyAssetFile(context: Context, assetPath: String, destPath: String) {
+        context.assets.open(assetPath).use { input ->
+            FileOutputStream(File(destPath)).use { output ->
+                input.copyTo(output)
+            }
+        }
+    }
+
+    private fun unzipModel(context: Context, zipAssetName: String, destDir: File): Boolean {
+        return try {
+            destDir.mkdirs()
+            context.assets.open(zipAssetName).use { input ->
+                ZipInputStream(input).use { zis ->
+                    var entry = zis.nextEntry
+                    while (entry != null) {
+                        val file = File(destDir, entry.name)
+                        if (entry.isDirectory) {
+                            file.mkdirs()
+                        } else {
+                            file.parentFile?.mkdirs()
+                            FileOutputStream(file).use { output ->
+                                zis.copyTo(output)
+                            }
+                        }
+                        entry = zis.nextEntry
+                    }
+                }
+            }
+            Log.d(TAG, "[압축해제] $zipAssetName → ${destDir.absolutePath}")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "[압축해제실패] $zipAssetName: ${e.message}", e)
+            false
+        }
+    }
+
+    private fun validateModelFiles(dir: File): Boolean {
+        if (!dir.exists() || !dir.isDirectory) {
+            Log.e(TAG, "[검증] model-ko 폴더가 존재하지 않거나 폴더가 아님: ${dir.absolutePath}")
+            return false
+        }
+        val files = dir.listFiles()
+        if (files == null) {
+            Log.e(TAG, "[검증] model-ko 폴더를 읽을 수 없음: ${dir.absolutePath}")
+            return false
+        }
+        val required = listOf("am", "conf", "graph", "ivector")
+        val folderNames = files.filter { it.isDirectory }.map { it.name }
+        val found = required.count { folderNames.contains(it) }
+        Log.d(TAG, "[검증] model-ko 내 폴더 목록: $folderNames, 필수 폴더 개수: $found")
+        if (found < 3) {
+            Log.e(TAG, "Vosk 모델 폴더에 필수 폴더가 부족합니다. (am, conf, graph, ivector 중 3개 이상 필요)")
+            return false
+        }
+        return true
+    }
+} 

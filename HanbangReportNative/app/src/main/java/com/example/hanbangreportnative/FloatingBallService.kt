@@ -112,12 +112,13 @@ class FloatingBallService : Service() {
         addFloatingBall()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        // SpeechService 초기화만 하고 바로 시작하지 않음
+        // SpeechService 초기화 및 플로팅 볼 활성화 상태 설정
         speechService = SpeechService(this, object : SpeechService.Callback {
             override fun onReportTrigger() {
                 // "신고" 트리거 인식 시 임시 저장(알림/안내 없음), type은 "내용 없음"으로 고정
                 saveReportData(voiceMode = true, voiceContent = "내용 없음", isFinal = false) { id ->
                     lastReportId = id
+                    // speechService?.notifyReadyForContentSTT() // 리팩터링 후 불필요, 삭제
                 }
             }
             override fun onReportContentResult(content: String) {
@@ -126,7 +127,8 @@ class FloatingBallService : Service() {
                 lastReportId?.let { id ->
                     ReportDataStore.updateReportViolationType(this@FloatingBallService, id, content) { updated ->
                         if (updated) {
-                            showNotification("신고 데이터가 저장되었습니다.", false, 1001, true)
+                            showNotification("신고 내용이 저장되었습니다.", false, 1001, true)
+                            // TTS 안내는 SpeechService에서만 한 번만 출력 (중복 방지)
                         } else {
                             showNotification("신고 데이터 violationType 갱신 실패", false, 2008, false)
                         }
@@ -149,7 +151,12 @@ class FloatingBallService : Service() {
                 Toast.makeText(this@FloatingBallService, error, Toast.LENGTH_SHORT).show()
             }
         })
-        // 플로팅 볼 생성 후 음성 인식 바로 시작
+        
+        // 플로팅 볼 활성화 상태 설정 및 음성 인식 시작
+        speechService?.setFloatingBallActive(true)
+        speechService?.setAppForegroundState(false) // 플로팅 볼 서비스는 백그라운드에서 실행
+        
+        // 음성 인식 시작 전 상태 확인
         Log.d("FloatingBallService", "speechService?.start() 호출 직전")
         speechService?.start()
         Log.d("FloatingBallService", "speechService?.start() 호출 완료")
@@ -221,11 +228,7 @@ class FloatingBallService : Service() {
 
         // 앱으로 돌아가기 버튼
         floatingView?.findViewById<ImageButton>(R.id.btn_return)?.setOnClickListener {
-            val intent = Intent(this, ReportListActivity::class.java)
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            intent.putExtra("from_floating_ball", true)
-            startActivity(intent)
-            // stopSelf() // 서비스 종료 금지, 안내만
+            returnToApp()
         }
         // 앱 종료 버튼
         floatingView?.findViewById<ImageButton>(R.id.btn_close)?.setOnClickListener {
@@ -366,9 +369,11 @@ class FloatingBallService : Service() {
             nm.createNotificationChannel(channel)
         }
         
+        // '신고 데이터가 저장되었습니다.'는 모두 '신고 내용이 저장되었습니다.'로 치환
+        val fixedMessage = if (message == "신고 데이터가 저장되었습니다.") "신고 내용이 저장되었습니다." else message
         val builder = NotificationCompat.Builder(this, channelId)
             .setContentTitle(if (isService) "플로팅 볼 동작 중" else "알림")
-            .setContentText(message)
+            .setContentText(fixedMessage)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -402,6 +407,45 @@ class FloatingBallService : Service() {
             Log.d("FloatingBallService", "알림 전송 성공: id=$id, message=$message")
         } catch (e: Exception) {
             Log.e("FloatingBallService", "알림 전송 실패: ${e.message}", e)
+        }
+    }
+
+    // 플로팅 볼 클릭 시 앱으로 복귀
+    private fun returnToApp() {
+        Log.d("FloatingBallService", "앱으로 복귀 시작")
+        
+        // 1. SpeechService 완전 종료
+        speechService?.setAppForegroundState(true) // 앱 포그라운드 상태로 설정하여 음성 인식 종료
+        speechService?.stop() // 음성 인식 서비스 중지
+        speechService?.destroy() // 음성 인식 서비스 완전 정리
+        speechService = null
+        
+        // 2. 플로팅 볼 제거
+        removeFloatingBall()
+        
+        // 3. ReportListActivity로 복귀
+        val intent = Intent(this, ReportListActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("from_floating_ball", true)
+        }
+        startActivity(intent)
+        
+        // 4. 서비스 종료
+        stopSelf()
+        
+        Log.d("FloatingBallService", "앱으로 복귀 완료")
+    }
+
+    // 플로팅 볼 제거 함수
+    private fun removeFloatingBall() {
+        try {
+            if (floatingView != null) {
+                windowManager.removeView(floatingView)
+                floatingView = null
+                Log.d("FloatingBallService", "플로팅 볼이 정상적으로 제거되었습니다.")
+            }
+        } catch (e: Exception) {
+            Log.e("FloatingBallService", "플로팅 볼 제거 중 오류: ${e.message}", e)
         }
     }
 

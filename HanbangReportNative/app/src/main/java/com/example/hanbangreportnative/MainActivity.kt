@@ -32,6 +32,9 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        
+        // LogManager 초기화
+        LogManager.init(this)
 
         // 운행 시작 버튼 클릭 리스너
         findViewById<ImageView>(R.id.driving_circle).setOnClickListener {
@@ -56,6 +59,25 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         updateReportCounts()
+        // 앱이 포그라운드에 있을 때 플로팅 볼 서비스 중지
+        stopFloatingBallService()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // 앱이 백그라운드로 갈 때는 플로팅 볼 서비스를 중지하지 않음
+        // (운행 시작 버튼을 눌러야만 플로팅 볼이 시작됨)
+    }
+
+    // 플로팅 볼 서비스 중지
+    private fun stopFloatingBallService() {
+        try {
+            val intent = Intent(this, FloatingBallService::class.java)
+            stopService(intent)
+            Log.d("MainActivity", "[상태체크] 앱 포그라운드 진입 - 플로팅 볼 서비스 중지")
+        } catch (e: Exception) {
+            Log.e("MainActivity", "[상태체크] 플로팅 볼 서비스 중지 실패: ${e.message}")
+        }
     }
 
     private fun updateReportCounts() {
@@ -209,11 +231,5 @@ class MainActivity : AppCompatActivity() {
         // 앱 완전 종료
         android.os.Process.killProcess(android.os.Process.myPid())
         System.exit(0)
-    }
-
-    private fun stopFloatingBallService() {
-        Log.d("MainActivity", "stopFloatingBallService() 호출")
-        val intent = Intent(this, FloatingBallService::class.java)
-        stopService(intent)
     }
 }
