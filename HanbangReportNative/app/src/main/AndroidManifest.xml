@@ -25,6 +25,9 @@
     <!-- 외부 저장소 접근 권한 (Android 9 이하) -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
 
+    <!-- 진동 설정 권한 -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"

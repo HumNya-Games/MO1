@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Vosk 모델 폴더 제외
+model-ko(vosk)/

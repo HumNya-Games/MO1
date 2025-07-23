@@ -1,33 +1,242 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="#000000">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:text="설정 화면"
-        android:textSize="24sp"
-        android:textColor="#FFFFFF"
-        android:gravity="center"
-        android:layout_gravity="center" />
-
-    <Button
-        android:id="@+id/btn_reset_data"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="데이터 초기화"
-        android:layout_margin="16dp"
-        android:backgroundTint="#1849D6"
-        android:textColor="#FFFFFF"
-        android:textSize="16sp" />
+        android:layout_height="match_parent"
+        android:layout_above="@+id/bottom_nav_bar"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- 버전 안내 및 업데이트 버튼 -->
+            <RelativeLayout
+                android:id="@+id/version_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/version_bg"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/version_status_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerHorizontal="true"
+                    android:text="최신 버전 입니다."
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/version_info_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/version_status_text"
+                    android:layout_centerHorizontal="true"
+                    android:layout_marginTop="4dp"
+                    android:text="현재 버전: 1.0.0"
+                    android:textColor="#CCCCCC"
+                    android:textSize="27sp" />
+            </RelativeLayout>
+
+            <!-- 공지 사항 -->
+            <RelativeLayout
+                android:id="@+id/announcement_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/announcement_bg"
+                android:padding="27dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="공지사항"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/arrow_icon" />
+            </RelativeLayout>
+
+            <!-- 소리 설정 -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/setting_bg"
+                android:paddingHorizontal="27dp">
+
+                <TextView
+                    android:id="@+id/sound_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:text="소리"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp" />
+
+                <SeekBar
+                    android:id="@+id/seekbar_volume"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_marginStart="27dp"
+                    android:layout_marginTop="-26dp"
+                    android:layout_toEndOf="@id/sound_title"
+                    android:background="@drawable/sound_bg"
+                    android:progressDrawable="@android:color/transparent"
+                    android:thumb="@drawable/toggle_button" />
+            </RelativeLayout>
+
+
+            <!-- 진동 설정 -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/setting_bg"
+                android:padding="27dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="진동"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="26dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/vibration_status_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:text="ON"
+                        android:textColor="#FFFFFF"
+                        android:textSize="14sp" />
+
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/vibration_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+            </RelativeLayout>
+
+            <!-- 사용 방법 안내 -->
+            <RelativeLayout
+                android:id="@+id/how_to_use_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/setting_bg"
+                android:padding="27dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="사용 방법 안내"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/arrow_icon" />
+            </RelativeLayout>
+
+            <!-- 이용 약관 -->
+            <RelativeLayout
+                android:id="@+id/terms_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/setting_bg"
+                android:padding="27dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="이용 약관"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/arrow_icon" />
+            </RelativeLayout>
+
+            <!-- 개인정보 처리방침 -->
+            <RelativeLayout
+                android:id="@+id/privacy_policy_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/setting_bg"
+                android:padding="27dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="개인정보 처리방침"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp" />
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/arrow_icon" />
+            </RelativeLayout>
+
+            <!-- 임시 데이터 초기화 버튼 -->
+            <Button
+                android:id="@+id/btn_reset_data"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="임시 데이터 초기화" />
+
+        </LinearLayout>
+    </ScrollView>
 
     <com.example.hanbangreportnative.BottomNavBar
         android:id="@+id/bottom_nav_bar"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:background="#000000" />
-</LinearLayout>
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true" />
+
+</RelativeLayout>
