@@ -160,6 +160,13 @@ class SpeechService(private val context: Context, private val callback: Callback
         private const val MAX_TYPE_LENGTH = 10
         private const val REPORT_GUIDE_TEXT = "신고 내용을 말씀해 주세요."
         private const val REPORT_SAVE_TEXT = "신고 내용이 저장되었습니다."
+        
+        @Volatile
+        private var instance: SpeechService? = null
+        
+        fun getInstance(context: Context): SpeechService? {
+            return instance
+        }
     }
 
     // ====== 핵심 상태 관리 ======
@@ -173,6 +180,9 @@ class SpeechService(private val context: Context, private val callback: Callback
     private var currentState = RecognitionState.IDLE
     private var isServiceActive = false // 서비스 활성화 상태
     private var isAppInForeground = false // 앱 포그라운드 상태
+    
+    // ====== 음성 인식 콜백 ======
+    private var recognitionCallback: ((String) -> Unit)? = null
 
     // ====== Vosk 관련 변수 ======
     private var voskModel: Model? = null
@@ -200,6 +210,7 @@ class SpeechService(private val context: Context, private val callback: Callback
     init {
         loadSettings()
         initTTS()
+        instance = this
     }
 
     private fun loadSettings() {
@@ -474,6 +485,9 @@ class SpeechService(private val context: Context, private val callback: Callback
     private fun handleWakeWordResult(result: String, isFinal: Boolean) {
         if (!isFinal) return
         
+        // 음성 인식 콜백 호출 (설정 화면에서 사용)
+        recognitionCallback?.invoke(result)
+        
         // 앱 종료 명령 체크 (기존 방식 복원)
         if (isAppExitCommand(result)) {
             Log.d(TAG, "앱 종료 명령 인식")
@@ -604,6 +618,16 @@ class SpeechService(private val context: Context, private val callback: Callback
             currentState = RecognitionState.IDLE
             onComplete?.invoke()
         }
+    }
+    
+    // ====== 외부에서 호출 가능한 TTS 메서드 ======
+    fun speakTTS(text: String, onComplete: (() -> Unit)? = null) {
+        speak(text, onComplete)
+    }
+    
+    // ====== 음성 인식 콜백 설정 ======
+    fun setRecognitionCallback(callback: (String) -> Unit) {
+        recognitionCallback = callback
     }
 
     // ====== 상태 초기화 ======

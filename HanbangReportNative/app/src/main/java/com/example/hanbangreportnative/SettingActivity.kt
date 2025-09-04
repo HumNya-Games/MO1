@@ -50,7 +50,7 @@ class SettingActivity : AppCompatActivity() {
 
     private fun setupVersionInfo() {
         val currentAppVersion = getAppVersion()
-        binding.versionInfoText.text = "현재 버전: $currentAppVersion"
+        binding.versionInfoText.text = "현재 버전 $currentAppVersion"
 
         val isLatestVersion = CURRENT_VERSION == LATEST_VERSION
 
@@ -62,7 +62,7 @@ class SettingActivity : AppCompatActivity() {
             }
         } else {
             binding.versionButton.setBackgroundResource(R.drawable.version_bg_on)
-            binding.versionStatusText.text = "업데이트하러 가기."
+            binding.versionStatusText.text = "업데이트하러 가기"
             binding.versionButton.setOnClickListener {
                 openUrl("https://jibbbob.quv.kr/5")
             }
@@ -166,7 +166,16 @@ class SettingActivity : AppCompatActivity() {
     private fun getAppVersion(): String {
         return try {
             val pInfo = packageManager.getPackageInfo(packageName, 0)
-            pInfo.versionName ?: "1.0.0" // versionName이 null일 경우 기본값 반환
+            val versionName = pInfo.versionName
+            if (versionName != null) {
+                if (versionName.contains(".")) {
+                    versionName // 이미 올바른 형식이면 그대로 반환
+                } else {
+                    "$versionName.0" // 형식이 맞지 않으면 ".0" 추가
+                }
+            } else {
+                "1.0.0" // versionName이 null인 경우 기본값 반환
+            }
         } catch (e: PackageManager.NameNotFoundException) {
             e.printStackTrace()
             "1.0.0" // 예외 발생 시 기본값 반환

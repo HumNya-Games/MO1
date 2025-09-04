@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/speech_setting_bg"
+    android:padding="24dp"
+    android:gravity="center"
+    android:layout_marginHorizontal="32dp"
+    android:minHeight="350dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="자동차 시동을 걸고 아래 시작 버튼을 눌러주세요."
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"
+        android:gravity="center" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="다른 소리는 내지 마세요."
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:layout_marginBottom="32dp"
+        android:gravity="center" />
+
+    <Button
+        android:id="@+id/btn_start_noise_measurement"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="주행 환경 소음 측정 시작"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:background="@drawable/announcement_bg"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="&lt; 실제 주행 중에 실행 시 정확도가 더 증가 합니다&gt;"
+        android:textColor="#CCCCCC"
+        android:textSize="12sp"
+        android:gravity="center" />
+
+</LinearLayout>
